@@ -52,7 +52,7 @@ export default function FeaturedSlider({ items = [], onOpen, showHeader = true }
           </div>
 
           <div style={{ display: 'flex', gap: '0.6em', alignItems: 'center' }}>
-      )}
+
           <button aria-label="prev" onClick={prev} style={{ background: 'rgba(74,93,82,0.06)', border: 'none', width: 44, height: 44, borderRadius: 10, cursor: 'pointer', fontSize: 20 }}>&larr;</button>
           <div style={{ display: 'flex', gap: 8 }}>
             {Array.from({ length: pages }).map((_, i) => (
