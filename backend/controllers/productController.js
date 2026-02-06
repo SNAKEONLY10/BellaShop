@@ -51,8 +51,10 @@ export const createProduct = async (req, res) => {
     
     // Add uploaded files
     if (req.files && req.files.length > 0) {
-      finalImageUrls = req.files.map(file => `/uploads/${file.filename}`);
-      console.log('✓ Files uploaded:', finalImageUrls);
+      // multer-storage-cloudinary provides a `path` (url) on the file object.
+      const uploadedUrls = req.files.map(file => file.path || file.secure_url || file.url || (`/uploads/${file.filename}`));
+      finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+      console.log('✓ Files uploaded (Cloudinary):', uploadedUrls);
     }
     
     // Add pasted image URLs if provided
@@ -134,9 +136,9 @@ export const updateProduct = async (req, res) => {
     
     // Add newly uploaded files
     if (req.files && req.files.length > 0) {
-      const newFileUrls = req.files.map(file => `/uploads/${file.filename}`);
+      const newFileUrls = req.files.map(file => file.path || file.secure_url || file.url || (`/uploads/${file.filename}`));
       finalImageUrls = [...finalImageUrls, ...newFileUrls];
-      console.log('✓ New files uploaded:', newFileUrls);
+      console.log('✓ New files uploaded (Cloudinary):', newFileUrls);
     }
 
     console.log('Final image URLs:', finalImageUrls);
