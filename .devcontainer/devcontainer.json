@@ -1,0 +1,16 @@
+{
+  "name": "BellaShop Dev Container",
+  "image": "mcr.microsoft.com/vscode/devcontainers/javascript-node:0-20",
+  "forwardPorts": [5000, 5173],
+  "postCreateCommand": "bash -lc 'cd backend && npm install && cd ../frontend && npm install'",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens"
+      ]
+    }
+  }
+}
