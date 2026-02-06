@@ -258,7 +258,7 @@ export default function Home() {
           </header>
 
           <div style={{ marginTop: '1.5em' }}>
-            <FeaturedSlider items={featuredProducts} onOpen={(p) => { setProductImageIndex(0); setOpenProduct(p); }} />
+            <FeaturedSlider showHeader={false} items={featuredProducts} onOpen={(p) => { setProductImageIndex(0); setOpenProduct(p); }} />
           </div>
 
           <ul style={{marginTop:'4em', display: 'flex', justifyContent: 'center', listStyle: 'none', margin: '4em auto 0 auto', padding: 0}}>
@@ -306,7 +306,7 @@ export default function Home() {
             </header>
 
             <div style={{ marginTop: '1.5em' }}>
-              <FeaturedSlider items={highlightedProducts} onOpen={(p) => { setProductImageIndex(0); setOpenProduct(p); }} />
+              <FeaturedSlider showHeader={false} items={highlightedProducts} onOpen={(p) => { setProductImageIndex(0); setOpenProduct(p); }} />
             </div>
           </div>
         </section>

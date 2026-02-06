@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-export default function FeaturedSlider({ items = [], onOpen }) {
+export default function FeaturedSlider({ items = [], onOpen, showHeader = true }) {
   const trackRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(1);
@@ -44,13 +44,15 @@ export default function FeaturedSlider({ items = [], onOpen }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25em' }}>
-        <div>
-          <p style={{ fontSize: '0.9em', color: '#f4a9a8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, fontFamily: '"Crimson Text", serif' }}>🌟 You Might Like</p>
-          <h3 style={{ margin: '6px 0 0 0', fontSize: '1.8em', color: '#4a5d52', fontWeight: 800, fontFamily: '"Playfair Display", serif' }}>Featured Products</h3>
-        </div>
+      {showHeader && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25em' }}>
+          <div>
+            <p style={{ fontSize: '0.9em', color: '#f4a9a8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, fontFamily: '"Crimson Text", serif' }}>🌟 You Might Like</p>
+            <h3 style={{ margin: '6px 0 0 0', fontSize: '1.8em', color: '#4a5d52', fontWeight: 800, fontFamily: '"Playfair Display", serif' }}>Featured Products</h3>
+          </div>
 
-        <div style={{ display: 'flex', gap: '0.6em', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.6em', alignItems: 'center' }}>
+      )}
           <button aria-label="prev" onClick={prev} style={{ background: 'rgba(74,93,82,0.06)', border: 'none', width: 44, height: 44, borderRadius: 10, cursor: 'pointer', fontSize: 20 }}>&larr;</button>
           <div style={{ display: 'flex', gap: 8 }}>
             {Array.from({ length: pages }).map((_, i) => (
@@ -72,8 +74,9 @@ export default function FeaturedSlider({ items = [], onOpen }) {
             ))}
           </div>
           <button aria-label="next" onClick={next} style={{ background: 'rgba(244,169,168,0.95)', border: 'none', width: 44, height: 44, borderRadius: 10, cursor: 'pointer', color: '#fff', fontWeight: 800, fontSize: 20 }}>&rarr;</button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div
         ref={trackRef}

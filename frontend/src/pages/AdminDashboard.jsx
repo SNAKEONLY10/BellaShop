@@ -9,6 +9,9 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState('');
   const [form, setForm] = useState({
     name: '',
     category: '',
@@ -32,10 +35,15 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const res = await axios.get('/api/products');
-      setProducts(Array.isArray(res.data) ? res.data : []);
+      const productsData = Array.isArray(res.data) ? res.data : [];
+      setProducts(productsData);
+      // Extract unique categories
+      const uniqueCats = [...new Set(productsData.map(p => p.category).filter(Boolean))];
+      setCategories(uniqueCats.sort());
     } catch (err) {
       console.error('Error fetching products:', err);
       setProducts([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -47,6 +55,16 @@ export default function AdminDashboard() {
     setImageFiles([]);
     setImagePreviews([]);
     setEditingId(null);
+  };
+
+  const handleAddNewCategory = () => {
+    if (newCategoryInput.trim() && !categories.includes(newCategoryInput.trim())) {
+      const newCat = newCategoryInput.trim();
+      setCategories([...categories, newCat].sort());
+      setForm({ ...form, category: newCat });
+      setNewCategoryInput('');
+      setShowNewCategoryInput(false);
+    }
   };
 
   const handleAddImage = () => {
@@ -376,15 +394,59 @@ export default function AdminDashboard() {
               />
 
               <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Category</label>
-              <input
-                type="text"
-                placeholder="e.g., Storage, Living, Dining, Bedroom"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                style={{ width: '100%', fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: '#4a5d52', boxSizing: 'border-box', marginBottom: '1.5em', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
-                onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
-                onBlur={(e) => { e.target.style.background = '#fafafa'; e.target.style.borderColor = '#e0e0e0'; e.target.style.boxShadow = 'none'; }}
-              />
+              <div style={{ display: 'flex', gap: '0.75em', marginBottom: '1.5em', alignItems: 'flex-start' }}>
+                <select
+                  value={form.category}
+                  onChange={(e) => {
+                    if (e.target.value === '__new__') {
+                      setShowNewCategoryInput(true);
+                    } else {
+                      setForm({ ...form, category: e.target.value });
+                    }
+                  }}
+                  style={{ flex: 1, fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: '#4a5d52', boxSizing: 'border-box', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
+                  onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
+                  onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
+                >
+                  <option value="">Select category...</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                  <option value="__new__">+ Add new category</option>
+                </select>
+              </div>
+
+              {showNewCategoryInput && (
+                <div style={{ display: 'flex', gap: '0.75em', marginTop: '-1em', marginBottom: '1.5em' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter new category (e.g., Sofa, Cabinet, Bed)"
+                    value={newCategoryInput}
+                    onChange={(e) => setNewCategoryInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddNewCategory()}
+                    autoFocus
+                    style={{ flex: 1, fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #f4a9a8', background: '#fff', color: '#4a5d52', boxSizing: 'border-box', outline: 'none', boxShadow: '0 0 0 3px rgba(244, 169, 168, 0.1)', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewCategory}
+                    style={{ padding: '0.9em 1.8em', background: '#f4a9a8', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.9em', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'nowrap', fontFamily: '"Crimson Text", serif' }}
+                    onMouseEnter={(e) => { e.target.style.background = '#e8918e'; e.target.style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={(e) => { e.target.style.background = '#f4a9a8'; e.target.style.transform = 'translateY(0)'; }}
+                  >
+                    ✓ Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewCategoryInput(false); setNewCategoryInput(''); }}
+                    style={{ padding: '0.9em 1.2em', background: 'transparent', color: '#7a8d84', border: '1px solid #d4cac1', borderRadius: '6px', fontWeight: 500, fontSize: '0.9em', cursor: 'pointer', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif' }}
+                    onMouseEnter={(e) => { e.target.style.borderColor = '#7a8d84'; }}
+                    onMouseLeave={(e) => { e.target.style.borderColor = '#d4cac1'; }}
+                  >
+                    ✕ Cancel
+                  </button>
+                </div>
+              )}
 
               <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Subcategory</label>
               <input
