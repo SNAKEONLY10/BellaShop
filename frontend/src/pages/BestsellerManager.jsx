@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client.js';
 
 export default function BestsellerManager() {
   const [products, setProducts] = useState([]);
@@ -16,8 +16,8 @@ export default function BestsellerManager() {
     try {
       setLoading(true);
       const [allRes, bestRes] = await Promise.all([
-        axios.get('/api/products'),
-        axios.get('/api/products/bestsellers'),
+        apiClient.get('/api/products'),
+        apiClient.get('/api/products/bestsellers'),
       ]);
       setProducts(Array.isArray(allRes.data) ? allRes.data : []);
       setBestsellerProducts(Array.isArray(bestRes.data) ? bestRes.data : []);
@@ -36,7 +36,7 @@ export default function BestsellerManager() {
 
   const toggleBestseller = async (productId) => {
     try {
-      const res = await axios.patch(`/api/products/${productId}/toggle-bestseller`, {}, {
+      const res = await apiClient.patch(`/api/products/${productId}/toggle-bestseller`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       await fetchProducts();

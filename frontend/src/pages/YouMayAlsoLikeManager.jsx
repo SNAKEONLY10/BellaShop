@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client.js';
 
 export default function YouMayAlsoLikeManager() {
   const [highlightedProducts, setHighlightedProducts] = useState([]);
@@ -27,7 +27,7 @@ export default function YouMayAlsoLikeManager() {
   const fetchHighlightedProducts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/products/highlighted');
+      const res = await apiClient.get('/api/products/highlighted');
       setHighlightedProducts(Array.isArray(res.data) ? res.data : []);
       setCurrentIndex(0);
     } catch (err) {
@@ -93,12 +93,12 @@ export default function YouMayAlsoLikeManager() {
     });
 
     try {
-      const res = await axios.post('/api/products', formData, {
+      const res = await apiClient.post('/api/products', formData, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' },
       });
 
       // Add to highlighted automatically on creation
-      await axios.patch(`/api/products/${res.data.id}/toggle-highlighted`, {}, {
+      await apiClient.patch(`/api/products/${res.data.id}/toggle-highlighted`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -121,7 +121,7 @@ export default function YouMayAlsoLikeManager() {
   const deleteProduct = async (productId) => {
     if (window.confirm('Remove this item from "You May Also Like"?')) {
       try {
-        await axios.delete(`/api/products/${productId}`, {
+        await apiClient.delete(`/api/products/${productId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         await fetchHighlightedProducts();

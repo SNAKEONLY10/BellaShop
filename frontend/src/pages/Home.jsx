@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client.js';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoginModal from '../components/LoginModal';
@@ -17,9 +17,9 @@ export default function Home() {
   useEffect(() => {
     let mounted = true;
     Promise.all([
-      axios.get('/api/products/featured'),
-      axios.get('/api/products/bestsellers'),
-      axios.get('/api/products/highlighted')
+      apiClient.get('/api/products/featured'),
+      apiClient.get('/api/products/bestsellers'),
+      apiClient.get('/api/products/highlighted')
     ]).then(([featRes, bestRes, highlightRes]) => {
       if (!mounted) return;
       setFeaturedProducts(Array.isArray(featRes.data) ? featRes.data : []);

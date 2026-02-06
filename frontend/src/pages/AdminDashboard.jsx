@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client.js';
 import FeaturedManager from './FeaturedManager';
 import BestsellerManager from './BestsellerManager';
 import YouMayAlsoLikeManager from './YouMayAlsoLikeManager';
@@ -34,7 +34,7 @@ export default function AdminDashboard() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/products');
+      const res = await apiClient.get('/api/products');
       const productsData = Array.isArray(res.data) ? res.data : [];
       setProducts(productsData);
       // Extract unique categories
@@ -139,13 +139,13 @@ export default function AdminDashboard() {
 
       if (editingId) {
         // Update product
-        await axios.put(`/api/products/${editingId}`, formData, {
+        await apiClient.put(`/api/products/${editingId}`, formData, {
           headers: { ...axiosConfig.headers, 'Content-Type': 'multipart/form-data' },
         });
         alert('Product updated successfully!');
       } else {
         // Create product
-        await axios.post('/api/products', formData, {
+        await apiClient.post('/api/products', formData, {
           headers: { ...axiosConfig.headers, 'Content-Type': 'multipart/form-data' },
         });
         alert('Product added successfully!');
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
     }
     try {
       console.log('📤 Sending DELETE to /api/products/' + id);
-      const response = await axios.delete(`/api/products/${id}`, {
+      const response = await apiClient.delete(`/api/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('✅ Delete response:', response.data);
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
 
   const toggleBestSeller = async (id) => {
     try {
-      const response = await axios.patch(`/api/products/${id}/toggle-bestseller`, {}, {
+      const response = await apiClient.patch(`/api/products/${id}/toggle-bestseller`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert('Best seller status updated!');

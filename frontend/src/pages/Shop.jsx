@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client.js';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import LoginModal from '../components/LoginModal';
@@ -23,7 +23,7 @@ export default function Shop() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/products');
+      const res = await apiClient.get('/api/products');
       const productsData = Array.isArray(res.data) ? res.data : [];
       setProducts(productsData);
       // Extract unique categories

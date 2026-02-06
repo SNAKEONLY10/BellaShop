@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client.js';
 import { useNavigate } from 'react-router-dom';
 
 // Clean admin dashboard with sidebar, header, stats, and logout
@@ -17,7 +17,7 @@ export default function Admin() {
   useEffect(() => {
     const fetchCount = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/products');
+        const res = await apiClient.get('/api/products');
         setProductsCount(Array.isArray(res.data) ? res.data.length : 0);
       } catch (err) {
         setProductsCount(0);

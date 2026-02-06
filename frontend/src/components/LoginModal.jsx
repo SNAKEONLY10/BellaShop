@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client.js';
 import { useNavigate } from 'react-router-dom';
 
 export default function LoginModal({ isOpen, onClose }) {
@@ -35,7 +35,7 @@ export default function LoginModal({ isOpen, onClose }) {
     if (!email || !password) return setError('Email and password are required');
     try {
       setLoading(true);
-      const res = await axios.post('/api/auth/login', { email, password });
+      const res = await apiClient.post('/api/auth/login', { email, password });
       const { token, admin } = res.data;
       localStorage.setItem('token', token);
       localStorage.setItem('admin', JSON.stringify(admin));

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client.js';
 import FeaturedSlider from '../components/FeaturedSlider';
 
 export default function FeaturedManager() {
@@ -15,10 +15,10 @@ export default function FeaturedManager() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const allRes = await axios.get('/api/products');
+      const allRes = await apiClient.get('/api/products');
       setAllProducts(Array.isArray(allRes.data) ? allRes.data : []);
 
-      const featuredRes = await axios.get('/api/products/featured');
+      const featuredRes = await apiClient.get('/api/products/featured');
       setFeaturedProducts(Array.isArray(featuredRes.data) ? featuredRes.data : []);
     } catch (err) {
       console.error('Error fetching products:', err);
@@ -29,7 +29,7 @@ export default function FeaturedManager() {
 
   const toggleFeatured = async (productId) => {
     try {
-      await axios.patch(`/api/products/${productId}/toggle-featured`, {}, {
+      await apiClient.patch(`/api/products/${productId}/toggle-featured`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert('Featured status updated!');
