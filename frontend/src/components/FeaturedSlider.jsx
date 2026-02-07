@@ -4,7 +4,8 @@ export default function FeaturedSlider({ items = [], onOpen, showHeader = true }
   const trackRef = useRef(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(1);
-  const CARD_WIDTH = 280; // px
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const CARD_WIDTH = isMobile ? 220 : 280; // px — smaller on mobile
   const GAP = 18; // px (approx for 1.2em)
 
   useEffect(() => {

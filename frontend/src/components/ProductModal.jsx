@@ -3,6 +3,9 @@ import React from 'react';
 export default function ProductModal({ product, currentIndex = 0, onClose, setIndex }) {
   if (!product) return null;
 
+  // Responsive grid: 1 column on mobile (< 768px), 2 columns on larger screens
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
     <div 
       onClick={onClose} 
@@ -14,16 +17,28 @@ export default function ProductModal({ product, currentIndex = 0, onClose, setIn
         alignItems: 'center', 
         justifyContent: 'center', 
         zIndex: 1200, 
-        padding: '1.5em',
-        backdropFilter: 'blur(4px)'
+        padding: isMobile ? '1em' : '1.5em',
+        backdropFilter: 'blur(4px)',
+        overflowY: 'auto'
       }}
     >
+      <style>{`
+        @media (max-width: 767px) {
+          .product-modal-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .product-modal-border {
+            border-right: none !important;
+          }
+        }
+      `}</style>
       <div 
         onClick={(e) => e.stopPropagation()} 
+        className="product-modal-grid"
         style={{ 
           width: '100%', 
-          maxWidth: 800,
-          maxHeight: '90vh',
+          maxWidth: isMobile ? '100%' : 800,
+          maxHeight: isMobile ? 'auto' : '90vh',
           background: 'linear-gradient(135deg, #fffbf9 0%, #fdf7f4 100%)', 
           borderRadius: 20, 
           overflow: 'hidden', 
@@ -35,13 +50,14 @@ export default function ProductModal({ product, currentIndex = 0, onClose, setIn
       >
         {/* Left: Product Image */}
         <div 
+          className="product-modal-border"
           style={{ 
             background: 'linear-gradient(135deg, #fff8f7 0%, #f5f0f0 100%)',
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
-            padding: '2em',
-            minHeight: 400,
+            padding: isMobile ? '1.5em' : '2em',
+            minHeight: isMobile ? 300 : 400,
             borderRight: '1px solid rgba(244, 169, 168, 0.15)'
           }}
         >
@@ -87,12 +103,12 @@ export default function ProductModal({ product, currentIndex = 0, onClose, setIn
         </div>
 
         {/* Right: Product Details */}
-        <div style={{ padding: '2.5em 2em', overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ padding: isMobile ? '1.5em 1em' : '2.5em 2em', overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', maxHeight: isMobile ? 'auto' : '90vh' }}>
           {/* Header */}
           <div>
             <h1 style={{ 
               margin: 0, 
-              fontSize: '2em', 
+              fontSize: isMobile ? '1.5em' : '2em', 
               color: '#3d5247',
               fontFamily: '"Playfair Display", serif',
               fontWeight: 800,

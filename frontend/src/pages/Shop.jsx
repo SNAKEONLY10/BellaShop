@@ -191,7 +191,12 @@ export default function Shop() {
               >View all items</button>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2em', marginTop: '2em' }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+              gap: '2em', 
+              marginTop: '2em'
+            }}>
               {products.filter(p => selectedCategory ? p.category === selectedCategory : true).map((product) => (
                 <div key={product.id} onClick={() => openGallery(product)} style={{ cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
                   <article style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(74, 93, 82, 0.08)', border: '1px solid rgba(244, 169, 168, 0.15)', transition: 'all 0.3s ease' }}
