@@ -805,6 +805,10 @@ export default function AdminDashboard() {
                   onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
                 >
                   <option value="" disabled>Select category...</option>
+                  {/* If the current category value isn't in the categories list, show it so it displays when editing */}
+                  {form.category && !categories.includes(form.category) && (
+                    <option value={form.category}>{form.category}</option>
+                  )}
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
@@ -864,6 +868,9 @@ export default function AdminDashboard() {
                 onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
               >
                 <option value="" disabled>Select condition...</option>
+                {form.condition && !['New','Like New','Used','Well-Used'].includes(form.condition) && (
+                  <option value={form.condition}>{form.condition}</option>
+                )}
                 <option value="New">New</option>
                 <option value="Like New">Like New</option>
                 <option value="Used">Used</option>
