@@ -242,14 +242,19 @@ export default function AdminDashboard() {
     // Build sentences: target 2 sentences (3rd optional)
     const parts = [];
 
-    // Sentence 1: condition + material + style + a leading feature or pool sentence
+    // Sentence 1: integrate condition subtly (not as its own sentence), then material/style and a leading pool sentence
     const firstFragments = [];
-    if (cond) firstFragments.push(cond);
+    let prefix = '';
+    if (cond) {
+      // Integrate condition as a clause rather than a standalone sentence
+      prefix = cond === 'New' || cond.toLowerCase().includes('new') ? 'Brand new' : `In ${cond} condition`;
+    }
+    if (prefix) prefix = prefix + ', ';
     if (material) firstFragments.push(material);
     if (styleHint) firstFragments.push(styleHint);
-    // use a strong pool sentence if available
+    // use a strong pool sentence fragment if available
     if (shuffled.length > 0) firstFragments.push(shuffled[0]);
-    const sentence1 = firstFragments.join(' ').replace(/\s+/g, ' ').trim();
+    let sentence1 = (prefix + firstFragments.join(' ')).replace(/\s+/g, ' ').trim();
     if (sentence1) parts.push(sentence1.endsWith('.') ? sentence1 : sentence1 + '.');
 
     // Sentence 2: size/features + purpose/benefit (try to extract length/width/height or features in details)
@@ -267,10 +272,18 @@ export default function AdminDashboard() {
       sizeParts.push(short.charAt(0).toUpperCase() + short.slice(1) + (short.endsWith('.') ? '' : '.'));
     }
 
-    // Purpose/benefit: synthesize from pool or fallback phrasing
-    let benefit = '';
-    if (shuffled.length > 1) benefit = shuffled[1];
-    else benefit = 'Ideal for everyday use and enhancing your space.';
+    // Purpose/benefit: choose a category-appropriate benefit
+    const benefitMapping = (category) => {
+      const c = (category || '').toLowerCase();
+      if (c.includes('bike') || c.includes('bicycle') || c.includes('e-bike') || c.includes('electric')) return 'Perfect for commuting, offering efficient and eco-friendly transport.';
+      if (c.includes('sofa') || c.includes('couch')) return 'Great for relaxing and hosting guests with comfort.';
+      if (c.includes('wardrobe') || c.includes('cabinet')) return 'Helps keep your home organized while saving space.';
+      if (c.includes('kitchen') || c.includes('appliance')) return 'Built for practical daily use in busy kitchens.';
+      if (c.includes('table') || c.includes('desk')) return 'Versatile for work or dining, fitting many room layouts.';
+      if (c.includes('display') || c.includes('divider')) return 'Ideal for display or partitioning, combining function with style.';
+      return shuffled.length > 1 ? shuffled[1] : 'Ideal for practical everyday use.';
+    };
+    const benefit = benefitMapping(form.category);
 
     const sentence2 = (sizeParts.join(' ') + ' ' + benefit).trim();
     if (sentence2) parts.push(sentence2.endsWith('.') ? sentence2 : sentence2 + '.');
