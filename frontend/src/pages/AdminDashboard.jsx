@@ -801,7 +801,29 @@ export default function AdminDashboard() {
                     }
                   }}
                   title={form.category || ''}
-                  style={{ flex: 1, fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#fff', color: '#2f333b', boxSizing: 'border-box', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  style={{
+                    flex: 1,
+                    fontSize: '1em',
+                    lineHeight: '1.4em',
+                    height: '48px',
+                    padding: '0.8em 1.2em',
+                    borderRadius: '8px',
+                    border: '1px solid #e8ddd8',
+                    background: '#fff',
+                    color: '#2f333b',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    transition: 'all 0.15s ease',
+                    fontFamily: '"Crimson Text", serif',
+                    letterSpacing: '0.01em',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                  }}
                   onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
                   onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
                 >
@@ -865,7 +887,30 @@ export default function AdminDashboard() {
                 value={form.condition}
                 onChange={(e) => setForm({ ...form, condition: e.target.value })}
                 title={form.condition || ''}
-                style={{ width: '100%', fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#fff', color: '#2f333b', boxSizing: 'border-box', marginBottom: '1.5em', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                style={{
+                  width: '100%',
+                  fontSize: '1em',
+                  lineHeight: '1.4em',
+                  height: '48px',
+                  padding: '0.8em 1.2em',
+                  borderRadius: '8px',
+                  border: '1px solid #e8ddd8',
+                  background: '#fff',
+                  color: '#2f333b',
+                  boxSizing: 'border-box',
+                  marginBottom: '1.5em',
+                  outline: 'none',
+                  transition: 'all 0.15s ease',
+                  fontFamily: '"Crimson Text", serif',
+                  letterSpacing: '0.01em',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: 'inline-block',
+                  verticalAlign: 'middle',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                }}
                 onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
                 onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
               >
