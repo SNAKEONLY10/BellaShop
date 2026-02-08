@@ -26,6 +26,7 @@ export default function AdminDashboard() {
     price: '',
     subcategory: '',
     condition: '',
+    conditionDetails: '',
     description: '',
     length: '',
     width: '',
@@ -137,6 +138,99 @@ export default function AdminDashboard() {
     }
   };
 
+  // Sentence pools for rule-based auto description (free, local)
+  const sentencePools = {
+    sofa: [
+      'Designed for comfortable seating and relaxation.',
+      'Ideal for living rooms and family areas.',
+      'Upholstered finish for an inviting look and feel.'
+    ],
+    wardrobe: [
+      'Provides organized storage for clothes and household items.',
+      'Helps keep your space tidy and clutter-free.',
+      'Built for durability and everyday use.'
+    ],
+    cabinet: [
+      'Provides organized storage for clothes and household items.',
+      'Helps keep your space tidy and clutter-free.',
+      'Compact design suitable for various room layouts.'
+    ],
+    kitchen: [
+      'Suitable for kitchen use and daily food preparation.',
+      'Practical item for household kitchen needs.',
+      'Easy to clean and maintain for busy kitchens.'
+    ],
+    appliance: [
+      'Designed to support airflow and ventilation.',
+      'Useful appliance for everyday comfort.',
+      'Energy-efficient design for cost savings.'
+    ],
+    divider: [
+      'Functional piece suitable for home or shop use.',
+      'Can be used for display or space separation.',
+      'Adds structure while maintaining visual appeal.'
+    ],
+    display: [
+      'Functional piece suitable for home or shop use.',
+      'Can be used for display or space separation.',
+      'Designed to showcase items attractively.'
+    ]
+  };
+
+  // Shuffle helper
+  const shuffle = (arr) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  // Choose pool by category name heuristics
+  const pickPool = (category) => {
+    if (!category) return [];
+    const c = category.toLowerCase();
+    if (c.includes('sofa')) return sentencePools.sofa;
+    if (c.includes('wardrobe')) return sentencePools.wardrobe;
+    if (c.includes('cabinet')) return sentencePools.cabinet;
+    if (c.includes('kitchen') || c.includes('teapot') || c.includes('kitchen')) return sentencePools.kitchen;
+    if (c.includes('fan') || c.includes('appliance') || c.includes('electric')) return sentencePools.appliance;
+    if (c.includes('divider') || c.includes('display')) return sentencePools.divider;
+    // fallback: try to map common words
+    for (const key of Object.keys(sentencePools)) {
+      if (c.includes(key)) return sentencePools[key];
+    }
+    return [];
+  };
+
+  // Generate description rule-based (no external APIs)
+  const generateDescription = () => {
+    const name = (form.name || '').trim() || 'This item';
+    const pool = pickPool(form.category || '');
+    const shuffled = shuffle(pool);
+    const count = Math.random() < 0.5 ? 1 : 2; // pick 1-2 sentences
+    const chosen = shuffled.slice(0, count);
+
+    // Build description parts
+    const parts = [];
+    parts.push(`${name}.`);
+    if (chosen.length > 0) parts.push(chosen.join(' '));
+    if (form.condition) parts.push(`Condition: ${form.condition}.`);
+    if (form.conditionDetails && form.conditionDetails.trim()) parts.push(`Notes: ${form.conditionDetails.trim()}.`);
+
+    // Small randomizer to avoid duplicates (adds phrasing variation)
+    const variants = [
+      'A timeless addition to your home.',
+      'A reliable choice for everyday use.',
+      'A tasteful piece that complements many interiors.'
+    ];
+    if (Math.random() < 0.35) parts.push(variants[Math.floor(Math.random() * variants.length)]);
+
+    const description = parts.join(' ');
+    setForm(prev => ({ ...prev, description }));
+  };
+
   const fetchSoldProducts = async () => {
     try {
       setLoading(true);
@@ -154,7 +248,7 @@ export default function AdminDashboard() {
   };
 
   const resetForm = () => {
-    setForm({ name: '', category: '', price: '', description: '' });
+    setForm({ name: '', category: '', price: '', condition: '', conditionDetails: '', description: '' });
     setImageFiles([]);
     setImagePreviews([]);
     setEditingId(null);
@@ -216,7 +310,12 @@ export default function AdminDashboard() {
       formData.append('price', form.price);
       formData.append('subcategory', form.subcategory || '');
       formData.append('condition', form.condition || '');
-      formData.append('description', form.description);
+      // Ensure condition details are included in description when saving
+      let finalDescription = form.description || '';
+      if (form.conditionDetails && !finalDescription.includes(form.conditionDetails)) {
+        finalDescription = `${finalDescription} Notes: ${form.conditionDetails}.`.trim();
+      }
+      formData.append('description', finalDescription);
       formData.append('length', form.length || '');
       formData.append('width', form.width || '');
       formData.append('height', form.height || '');
@@ -316,6 +415,7 @@ export default function AdminDashboard() {
       price: product.price,
       subcategory: product.subcategory || '',
       condition: product.condition || '',
+      conditionDetails: product.conditionDetails || '',
       description: product.description || '',
       length: product.length || '',
       width: product.width || '',
@@ -760,6 +860,15 @@ export default function AdminDashboard() {
                 <option value="Well-Used">Well-Used</option>
               </select>
 
+              <label style={{ display: 'block', marginTop: '0.6em', marginBottom: '0.4em', fontWeight: 700, color: '#4a5d52', fontSize: '0.95em' }}>Condition Details (optional)</label>
+              <input
+                type="text"
+                placeholder="e.g., small scratches at the back"
+                value={form.conditionDetails}
+                onChange={(e) => setForm({ ...form, conditionDetails: e.target.value })}
+                style={{ width: '100%', fontSize: '0.95em', padding: '0.8em 1em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: '#4a5d52', boxSizing: 'border-box', marginBottom: '1.2em', outline: 'none' }}
+              />
+
               <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Price (₱) *</label>
               <input
                 type="number"
@@ -771,7 +880,14 @@ export default function AdminDashboard() {
                 onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
               />
 
-              <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Description</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Description</label>
+                <button
+                  type="button"
+                  onClick={generateDescription}
+                  style={{ background: 'transparent', border: '1px solid rgba(68,93,82,0.08)', padding: '0.4em 0.6em', borderRadius: 8, cursor: 'pointer', color: '#3d5247', fontWeight: 700, fontSize: '0.85em' }}
+                >Auto-Generate</button>
+              </div>
               <textarea
                 placeholder="Share the story of this piece—its craftsmanship, materials, era, condition, and unique characteristics that make it special..."
                 value={form.description}
