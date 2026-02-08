@@ -135,6 +135,9 @@ export default function Collection() {
                     <p style={{ fontWeight: 700, color: '#484d55', fontSize: '1.1em', marginBottom: '0.5em' }}>
                       ₱{product.price?.toLocaleString() || 'Contact for pricing'}
                     </p>
+                    <p style={{ fontSize: '0.85em', color: '#919499', marginBottom: '0.5em' }}>
+                      Posted {product.createdAt ? new Date(product.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                    </p>
                     {product.imageUrls && product.imageUrls.length > 1 && (
                       <p style={{ fontSize: '0.85em', color: '#919499', fontStyle: 'italic' }}>
                         {product.imageUrls.length} images available

@@ -113,6 +113,7 @@ export default function FeaturedSlider({ items = [], onOpen, showHeader = true }
             <div style={{ padding: '1em 1.1em' }}>
               <h4 style={{ margin: 0, fontSize: '1.05em', color: '#4a5d52', fontFamily: '"Playfair Display", serif', fontWeight: 800 }}>{p.name}</h4>
               <p style={{ margin: '0.6em 0 0 0', color: '#7a8d84', fontSize: '0.92em', fontFamily: '"Crimson Text", serif' }}>{p.category}</p>
+              <p style={{ margin: '0.4em 0 0 0', color: '#a8bbb2', fontSize: '0.85em', fontFamily: '"Crimson Text", serif' }}>Posted {p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : 'N/A'}</p>
               <p style={{ margin: '0.6em 0 0 0', color: '#f4a9a8', fontWeight: 800, fontSize: '1.2em', fontFamily: '"Playfair Display", serif' }}>₱{p.price?.toLocaleString() || 'Contact'}</p>
             </div>
           </div>

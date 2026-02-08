@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 // Clean admin dashboard with sidebar, header, stats, and logout
 export default function Admin() {
   const navigate = useNavigate();
-  const [productsCount, setProductsCount] = useState(null);
+  const [stats, setStats] = useState({ total: 0, available: 0, sold: 0 });
   const [loading, setLoading] = useState(true);
 
   const handleLogout = () => {
@@ -15,17 +15,21 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    const fetchCount = async () => {
+    const fetchStats = async () => {
       try {
-        const res = await apiClient.get('/api/products');
-        setProductsCount(Array.isArray(res.data) ? res.data.length : 0);
+        const token = localStorage.getItem('token');
+        const res = await apiClient.get('/api/products/stats/overview', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setStats(res.data);
       } catch (err) {
-        setProductsCount(0);
+        console.error('Error fetching stats:', err);
+        setStats({ total: 0, available: 0, sold: 0 });
       } finally {
         setLoading(false);
       }
     };
-    fetchCount();
+    fetchStats();
   }, []);
 
   const admin = JSON.parse(localStorage.getItem('admin') || 'null');

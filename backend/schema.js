@@ -19,9 +19,14 @@ export const products = sqliteTable('products', {
   subcategory: text('subcategory'),
   condition: text('condition'),
   imageUrls: text('imageUrls'), // Stored as JSON string
+  status: text('status').default('Available'), // Available / Sold
+  length: real('length'), // Dimension: Length
+  width: real('width'),   // Dimension: Width
+  height: real('height'), // Dimension: Height
   isFeatured: integer('isFeatured', { mode: 'boolean' }).default(false),
   isBestSeller: integer('isBestSeller', { mode: 'boolean' }).default(false),
   isHighlighted: integer('isHighlighted', { mode: 'boolean' }).default(false),
   createdAt: integer('createdAt', { mode: 'timestamp' }).default(new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).default(new Date()),
+  soldAt: integer('soldAt', { mode: 'timestamp' }), // Timestamp when marked as sold
 });

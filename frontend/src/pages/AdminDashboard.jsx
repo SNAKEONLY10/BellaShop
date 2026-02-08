@@ -7,9 +7,17 @@ import YouMayAlsoLikeManager from './YouMayAlsoLikeManager';
 export default function AdminDashboard() {
   const [view, setView] = useState('inventory');
   const [products, setProducts] = useState([]);
+  const [soldProducts, setSoldProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ total: 0, available: 0, sold: 0 });
   const [editingId, setEditingId] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [sortOption, setSortOption] = useState('default');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState('');
   const [form, setForm] = useState({
@@ -19,9 +27,11 @@ export default function AdminDashboard() {
     subcategory: '',
     condition: '',
     description: '',
-    imageUrls: [],
+    length: '',
+    width: '',
+    height: '',
   });
-  const [imageInput, setImageInput] = useState('');
+  
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
 
@@ -30,6 +40,74 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Fetch sold products when view changes to 'sold'
+  useEffect(() => {
+    if (view === 'sold') {
+      fetchSoldProducts();
+    }
+  }, [view]);
+
+  // autocomplete suggestions for admin search (names + categories)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setSelectedSuggestionIndex(-1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const q = (debouncedSearchTerm || '').trim().toLowerCase();
+    if (!q) {
+      setSuggestions([]);
+      return;
+    }
+    const items = [];
+    products.forEach((p) => {
+      if (p.name) items.push(p.name);
+      if (p.category) items.push(p.category);
+    });
+    const uniq = [...new Set(items.map(s => s.trim()).filter(Boolean))];
+    const matched = uniq.filter(s => s.toLowerCase().startsWith(q)).slice(0, 8);
+    setSuggestions(matched);
+  }, [debouncedSearchTerm, products]);
+
+  // keyboard navigation for search suggestions
+  const handleSearchKeyDown = (e) => {
+    if (suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+      e.preventDefault();
+      setSearchTerm(suggestions[selectedSuggestionIndex]);
+      setSuggestions([]);
+    } else if (e.key === 'Escape') {
+      setSuggestions([]);
+      setSelectedSuggestionIndex(-1);
+    }
+  };
+
+  // compute filtered + sorted products for inventory display
+  const displayedProducts = products
+    .filter((p) => {
+      const matchesCategory = selectedCategory ? p.category === selectedCategory : true;
+      if (!debouncedSearchTerm) return matchesCategory;
+      const q = debouncedSearchTerm.toLowerCase();
+      const name = (p.name || '').toLowerCase();
+      const cat = (p.category || '').toLowerCase();
+      return matchesCategory && (name.includes(q) || cat.includes(q));
+    })
+    .slice() // copy before sort
+    .sort((a, b) => {
+      if (sortOption === 'price-asc') return (Number(a.price) || 0) - (Number(b.price) || 0);
+      if (sortOption === 'price-desc') return (Number(b.price) || 0) - (Number(a.price) || 0);
+      return 0;
+    });
 
   const fetchProducts = async () => {
     try {
@@ -40,6 +118,16 @@ export default function AdminDashboard() {
       // Extract unique categories
       const uniqueCats = [...new Set(productsData.map(p => p.category).filter(Boolean))];
       setCategories(uniqueCats.sort());
+      
+      // Fetch stats
+      try {
+        const statsRes = await apiClient.get('/api/products/stats/overview', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setStats(statsRes.data);
+      } catch (statsErr) {
+        console.error('Error fetching stats:', statsErr);
+      }
     } catch (err) {
       console.error('Error fetching products:', err);
       setProducts([]);
@@ -49,9 +137,24 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchSoldProducts = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get('/api/products/sold/all', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const soldData = Array.isArray(res.data) ? res.data : [];
+      setSoldProducts(soldData);
+    } catch (err) {
+      console.error('Error fetching sold products:', err);
+      setSoldProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
-    setForm({ name: '', category: '', price: '', description: '', imageUrls: [] });
-    setImageInput('');
+    setForm({ name: '', category: '', price: '', description: '' });
     setImageFiles([]);
     setImagePreviews([]);
     setEditingId(null);
@@ -64,16 +167,6 @@ export default function AdminDashboard() {
       setForm({ ...form, category: newCat });
       setNewCategoryInput('');
       setShowNewCategoryInput(false);
-    }
-  };
-
-  const handleAddImage = () => {
-    if (imageInput.trim()) {
-      setForm((prev) => ({
-        ...prev,
-        imageUrls: [...prev.imageUrls, imageInput.trim()],
-      }));
-      setImageInput('');
     }
   };
 
@@ -96,21 +189,24 @@ export default function AdminDashboard() {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleRemoveImage = (index) => {
-    setForm((prev) => ({
-      ...prev,
-      imageUrls: prev.imageUrls.filter((_, i) => i !== index),
-    }));
-  };
-
   const submitProduct = async (e) => {
     e.preventDefault();
     if (!form.name || !form.price) {
       alert('Name and price are required');
       return;
     }
+    
+    if (imageFiles.length === 0) {
+      alert('Please upload at least one product image');
+      return;
+    }
 
     try {
+      console.log('🚀 Submitting product...');
+      console.log('Form data:', form);
+      console.log('Image files:', imageFiles);
+      console.log('Token available:', !!token);
+      
       let axiosConfig = { headers: { Authorization: `Bearer ${token}` } };
       
       // Always use FormData for file uploads
@@ -121,47 +217,52 @@ export default function AdminDashboard() {
       formData.append('subcategory', form.subcategory || '');
       formData.append('condition', form.condition || '');
       formData.append('description', form.description);
+      formData.append('length', form.length || '');
+      formData.append('width', form.width || '');
+      formData.append('height', form.height || '');
 
       // Add uploaded files
+      console.log('📸 Adding', imageFiles.length, 'image files...');
       if (imageFiles.length > 0) {
-        imageFiles.forEach((file) => {
+        imageFiles.forEach((file, idx) => {
+          console.log(`  File ${idx + 1}:`, file.name, file.size, 'bytes');
           formData.append('images', file);
         });
       }
 
-      // Add pasted image URLs (filter out blob URLs from file previews)
-      const pastedUrls = form.imageUrls.filter(url => !url.startsWith('blob:'));
-      if (pastedUrls.length > 0) {
-        formData.append('imageUrls', JSON.stringify(pastedUrls));
-      } else {
-        formData.append('imageUrls', JSON.stringify([]));
-      }
-
+      console.log('📤 Sending request...');
       if (editingId) {
         // Update product
-        await apiClient.put(`/api/products/${editingId}`, formData, {
+        const response = await apiClient.put(`/api/products/${editingId}`, formData, {
           headers: { ...axiosConfig.headers, 'Content-Type': 'multipart/form-data' },
         });
+        console.log('✅ Product updated:', response.data);
         alert('Product updated successfully!');
       } else {
         // Create product
-        await apiClient.post('/api/products', formData, {
+        const response = await apiClient.post('/api/products', formData, {
           headers: { ...axiosConfig.headers, 'Content-Type': 'multipart/form-data' },
         });
+        console.log('✅ Product created:', response.data);
         alert('Product added successfully!');
       }
       resetForm();
       await fetchProducts();
       setView('inventory');
     } catch (err) {
-      console.error('Error submitting product:', err);
+      console.error('❌ Error submitting product:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        data: err.response?.data,
+        fullError: err
+      });
       alert('Error: ' + (err.response?.data?.message || err.message));
     }
   };
 
   const deleteProduct = async (id) => {
     console.log('🗑️ Delete clicked. Token:', token ? 'EXISTS' : 'MISSING');
-    if (!window.confirm('Are you sure you want to delete this product?')) {
+    if (!window.confirm('Are you sure you want to delete?')) {
       console.log('❌ Delete cancelled by user');
       return;
     }
@@ -180,6 +281,17 @@ export default function AdminDashboard() {
         message: err.response?.data?.message,
         fullError: err
       });
+      alert('Error: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const toggleSold = async (id) => {
+    try {
+      await apiClient.patch(`/api/products/${id}/toggle-sold`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      alert('Product sold status updated');
+      await fetchProducts();
+    } catch (err) {
+      console.error('Error toggling sold status:', err);
       alert('Error: ' + (err.response?.data?.message || err.message));
     }
   };
@@ -205,7 +317,9 @@ export default function AdminDashboard() {
       subcategory: product.subcategory || '',
       condition: product.condition || '',
       description: product.description || '',
-      imageUrls: product.imageUrls || [],
+      length: product.length || '',
+      width: product.width || '',
+      height: product.height || '',
     });
     setEditingId(product.id);
     setView('add');
@@ -275,6 +389,7 @@ export default function AdminDashboard() {
         <nav style={{ flex: 1 }}>
           {[
             { id: 'inventory', label: '📦 Inventory', icon: '📦' },
+            { id: 'sold', label: '✓ Sold Items', icon: '✓' },
             { id: 'add', label: '✨ Add New', icon: '✨' },
             { id: 'bestsellers', label: '🏆 6 Bestsellers', icon: '🏆' },
             { id: 'featured', label: '✨ Featured Slider', icon: '✨' },
@@ -307,6 +422,64 @@ export default function AdminDashboard() {
               <p style={{ fontSize: '1.05em', color: '#7a8d84', fontFamily: '"Crimson Text", serif', lineHeight: '1.6em' }}>Manage your curated collection of premium Japanese furniture pieces</p>
             </div>
 
+            {/* Quick Stats */}
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5em' }}>
+              <div style={{ padding: '0.8em 1em', background: '#fff', borderRadius: '8px', border: '1px solid rgba(74,93,82,0.06)' }}>
+                <div style={{ fontSize: '0.85em', color: '#7a8d84' }}>Total</div>
+                <div style={{ fontSize: '1.2em', fontWeight: 800, color: '#4a5d52' }}>{stats.total}</div>
+              </div>
+              <div style={{ padding: '0.8em 1em', background: '#fff', borderRadius: '8px', border: '1px solid rgba(74,93,82,0.06)' }}>
+                <div style={{ fontSize: '0.85em', color: '#7a8d84' }}>Available</div>
+                <div style={{ fontSize: '1.2em', fontWeight: 800, color: '#4a5d52' }}>{stats.available}</div>
+              </div>
+              <div style={{ padding: '0.8em 1em', background: '#fff', borderRadius: '8px', border: '1px solid rgba(74,93,82,0.06)' }}>
+                <div style={{ fontSize: '0.85em', color: '#7a8d84' }}>Sold</div>
+                <div style={{ fontSize: '1.2em', fontWeight: 800, color: '#4a5d52' }}>{stats.sold}</div>
+              </div>
+            </div>
+
+            {/* Category filter + Sort controls */}
+            {categories.length > 0 && (
+              <div style={{ marginBottom: '1.2em', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1em', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '0.6em', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    style={{ padding: '0.5em 1em', background: selectedCategory === null ? 'linear-gradient(135deg, #f4a9a8, #e8918e)' : 'rgba(74, 93, 82, 0.06)', color: selectedCategory === null ? '#fff' : '#4a5d52', border: 'none', borderRadius: '18px', fontWeight: 700, fontSize: '0.85em', cursor: 'pointer' }}
+                  >All Items</button>
+                  {categories.map((cat) => (
+                    <button key={cat} onClick={() => setSelectedCategory(cat)} style={{ padding: '0.5em 1em', background: selectedCategory === cat ? 'linear-gradient(135deg, #f4a9a8, #e8918e)' : 'rgba(74, 93, 82, 0.06)', color: selectedCategory === cat ? '#fff' : '#4a5d52', border: 'none', borderRadius: '18px', fontWeight: 700, fontSize: '0.85em', cursor: 'pointer', textTransform: 'capitalize' }}>{cat}</button>
+                  ))}
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={handleSearchKeyDown}
+                      placeholder="Search products..."
+                      style={{ padding: '0.6em 0.9em', borderRadius: '10px', border: '1px solid #e8ddd8', background: '#faf9f7', color: '#4a5d52', fontFamily: '"Crimson Text", serif', minWidth: '220px', marginLeft: '0.6em' }}
+                    />
+                    {suggestions.length > 0 && (
+                      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, background: '#fff', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '10px', boxShadow: '0 8px 20px rgba(74,93,82,0.08)', zIndex: 60, overflow: 'hidden' }}>
+                        {suggestions.map((s, idx) => (
+                          <div key={s} onMouseDown={() => { setSearchTerm(s); setSuggestions([]); }} onMouseEnter={() => setSelectedSuggestionIndex(idx)} style={{ padding: '0.6em 0.9em', cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.03)', fontFamily: '"Crimson Text", serif', color: selectedSuggestionIndex === idx ? '#fff' : '#4a5d52', background: selectedSuggestionIndex === idx ? 'linear-gradient(135deg, #f4a9a8, #e8918e)' : 'transparent' }}>
+                            {s}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6em' }}>
+                  <label style={{ color: '#7a8d84', fontWeight: 700, fontSize: '0.85em' }}>Sort</label>
+                  <select value={sortOption} onChange={(e) => setSortOption(e.target.value)} style={{ padding: '0.6em 0.8em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#fff', fontSize: '0.95em' }}>
+                    <option value="default">Default</option>
+                    <option value="price-asc">Price: Low → High</option>
+                    <option value="price-desc">Price: High → Low</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
             {loading ? (
               <p style={{ fontSize: '1.1em', color: '#7a8d84', textAlign: 'center', padding: '3em' }}>Loading your collection...</p>
             ) : products.length === 0 ? (
@@ -319,9 +492,14 @@ export default function AdminDashboard() {
                   + Add Your First Piece
                 </button>
               </div>
+            ) : displayedProducts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '4em 2em', background: 'rgba(244, 169, 168, 0.04)', borderRadius: '12px', marginTop: '1em' }}>
+                <p style={{ color: '#7a8d84', fontSize: '1.1em', marginBottom: '1em' }}>🔍 No items found in <strong>{selectedCategory}</strong></p>
+                <button onClick={() => setSelectedCategory(null)} style={{ padding: '0.7em 1.6em', background: 'linear-gradient(135deg, #f4a9a8, #e8918e)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>View all items</button>
+              </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2.5em', marginTop: '2em' }}>
-                {products.map((product) => (
+                {displayedProducts.map((product) => (
                   <div key={product.id} style={{ background: '#fff', padding: '1.8em', borderRadius: '12px', boxShadow: '0 4px 16px rgba(74, 93, 82, 0.08)', position: 'relative', border: '1px solid rgba(244, 169, 168, 0.15)', transition: 'all 0.3s ease', cursor: 'pointer' }}
                     onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 12px 32px rgba(74, 93, 82, 0.12)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(74, 93, 82, 0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}
@@ -342,7 +520,8 @@ export default function AdminDashboard() {
                     <h3 style={{ fontSize: '1.3em', color: '#4a5d52', marginBottom: '0.4em', fontWeight: 700, fontFamily: '"Playfair Display", serif', letterSpacing: '-0.01em' }}>{product.name}</h3>
                     <p style={{ color: '#7a8d84', fontSize: '0.95em', marginBottom: '0.6em', fontFamily: '"Crimson Text", serif' }}>{product.category || 'Uncategorized'}</p>
                     <p style={{ fontWeight: 700, color: '#f4a9a8', fontSize: '1.15em', marginBottom: '0.6em', fontFamily: '"Playfair Display", serif' }}>₱{product.price?.toLocaleString()}</p>
-                    <p style={{ fontSize: '0.85em', color: '#a8bbb2', marginBottom: '1.3em', fontFamily: '"Crimson Text", serif' }}>📸 {product.imageUrls?.length || 0} image{product.imageUrls?.length !== 1 ? 's' : ''}</p>
+                    <p style={{ fontSize: '0.85em', color: '#a8bbb2', marginBottom: '0.5em', fontFamily: '"Crimson Text", serif' }}>📸 {product.imageUrls?.length || 0} image{product.imageUrls?.length !== 1 ? 's' : ''}</p>
+                    <p style={{ fontSize: '0.8em', color: '#a8bbb2', marginBottom: '1.3em', fontFamily: '"Crimson Text", serif' }}>Posted {product.createdAt ? new Date(product.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : 'N/A'}</p>
                     <div style={{ display: 'flex', gap: '0.6em', flexWrap: 'wrap' }}>
                       <button onClick={() => editProduct(product)} style={{ flex: '1 1 auto', minWidth: '65px', padding: '0.8em 1.2em', background: '#4a5d52', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.9em', cursor: 'pointer', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif' }}
                         onMouseEnter={(e) => { e.target.style.background = '#3d4f47'; e.target.style.transform = 'translateY(-2px)'; }}
@@ -354,10 +533,117 @@ export default function AdminDashboard() {
                       >
                         {product.isBestSeller ? '★ Remove' : '☆ Mark Best'}
                       </button>
+                      <button onClick={() => toggleSold(product.id)} style={{ flex: '1 1 auto', minWidth: '100px', padding: '0.8em 1.2em', background: product.status === 'Sold' ? 'rgba(107,112,128,0.12)' : 'linear-gradient(135deg, #4a5d52, #3d4f47)', color: product.status === 'Sold' ? '#6b7280' : '#fff', border: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '0.85em', cursor: 'pointer', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif' }}
+                        onMouseEnter={(e) => { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 12px rgba(74,93,82,0.12)'; }}
+                        onMouseLeave={(e) => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
+                      >
+                        {product.status === 'Sold' ? 'Mark Available' : 'Mark Sold'}
+                      </button>
                       <button onClick={() => deleteProduct(product.id)} style={{ flex: '1 1 auto', minWidth: '65px', padding: '0.8em 1.2em', background: 'rgba(244, 169, 168, 0.2)', color: '#f4a9a8', border: '1px solid rgba(244, 169, 168, 0.3)', borderRadius: '6px', fontWeight: 700, fontSize: '0.9em', cursor: 'pointer', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif' }}
                         onMouseEnter={(e) => { e.target.style.background = 'rgba(244, 169, 168, 0.3)'; e.target.style.transform = 'translateY(-2px)'; }}
                         onMouseLeave={(e) => { e.target.style.background = 'rgba(244, 169, 168, 0.2)'; e.target.style.transform = 'translateY(0)'; }}
                       >🗑️ Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sold Items View */}
+        {view === 'sold' && (
+          <div>
+            <div style={{ marginBottom: '2.5em' }}>
+              <p style={{ fontSize: '0.85em', color: '#f4a9a8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5em', fontFamily: '"Crimson Text", serif' }}>✓ Sold Items</p>
+              <h2 style={{ margin: 0, fontSize: '2.2em', color: '#3d5247', fontFamily: '"Playfair Display", serif', fontWeight: 800, letterSpacing: '-0.02em' }}>
+                Recently Sold ({soldProducts.length})
+              </h2>
+              <p style={{ margin: '0.8em 0 0 0', color: '#7a8d84', fontSize: '0.95em', lineHeight: '1.6em' }}>
+                Items marked as sold. These will be automatically removed 1 month after being sold.
+              </p>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '3em', color: '#7a8d84' }}>Loading sold items...</div>
+            ) : soldProducts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3em', color: '#7a8d84' }}>No sold items yet</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2em' }}>
+                {soldProducts.map((product) => (
+                  <div key={product.id} style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(244, 169, 168, 0.12)', transition: 'all 0.3s ease' }}>
+                    {/* Product Image */}
+                    <div style={{ position: 'relative', height: '200px', overflow: 'hidden', background: '#f5f0f0' }}>
+                      <img 
+                        src={product.imageUrls?.[0] || 'https://via.placeholder.com/300x200'} 
+                        alt={product.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <div style={{ position: 'absolute', top: '0.8em', right: '0.8em', padding: '0.4em 0.8em', background: '#6b7280', color: '#fff', borderRadius: '6px', fontSize: '0.75em', fontWeight: 700 }}>
+                        SOLD
+                      </div>
+                    </div>
+
+                    {/* Product Info */}
+                    <div style={{ padding: '1.5em' }}>
+                      <h3 style={{ margin: '0 0 0.5em 0', fontSize: '1.1em', color: '#3d5247', fontWeight: 700 }}>
+                        {product.name}
+                      </h3>
+                      
+                      <p style={{ margin: '0.5em 0', fontSize: '0.9em', color: '#7a8d84' }}>
+                        <strong style={{ color: '#f4a9a8' }}>₱{product.price?.toLocaleString() || 'N/A'}</strong>
+                      </p>
+
+                      {product.category && (
+                        <p style={{ margin: '0.5em 0', fontSize: '0.85em', color: '#7a8d84' }}>
+                          📌 {product.category}
+                        </p>
+                      )}
+
+                      {/* Sold Date */}
+                      {product.soldAt && (
+                        <p style={{ margin: '0.8em 0 0 0', paddingTop: '0.8em', borderTop: '1px solid rgba(244, 169, 168, 0.2)', fontSize: '0.85em', color: '#f4a9a8', fontWeight: 700 }}>
+                          Sold {new Date(product.soldAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      )}
+
+                      {/* Restore Button */}
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await apiClient.patch(`/api/products/${product.id}/toggle-sold`, {}, {
+                              headers: { Authorization: `Bearer ${token}` }
+                            });
+                            fetchSoldProducts();
+                            fetchProducts();
+                          } catch (err) {
+                            console.error('Error restoring product:', err);
+                          }
+                        }}
+                        style={{ 
+                          marginTop: '1em', 
+                          width: '100%', 
+                          padding: '0.8em', 
+                          background: 'linear-gradient(135deg, #f4a9a8, #e8918e)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '0.85em',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, #e8918e, #dd7a76)';
+                          e.target.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'linear-gradient(135deg, #f4a9a8, #e8918e)';
+                          e.target.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        ↺ Restore to Available
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -495,6 +781,22 @@ export default function AdminDashboard() {
                 onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
               />
 
+              {/* Dimensions Inputs L / W / H */}
+              <div style={{ display: 'flex', gap: '0.8em', marginBottom: '1.5em', alignItems: 'center' }}>
+                <div style={{ flex: '1 1 33%' }}>
+                  <label style={{ display: 'block', marginBottom: '0.4em', fontWeight: 700, color: '#4a5d52', fontSize: '0.95em' }}>L</label>
+                  <input type="number" placeholder="Length" value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })} style={{ width: '100%', padding: '0.8em', borderRadius: '8px', border: '1px solid #e8ddd8' }} />
+                </div>
+                <div style={{ flex: '1 1 33%' }}>
+                  <label style={{ display: 'block', marginBottom: '0.4em', fontWeight: 700, color: '#4a5d52', fontSize: '0.95em' }}>W</label>
+                  <input type="number" placeholder="Width" value={form.width} onChange={(e) => setForm({ ...form, width: e.target.value })} style={{ width: '100%', padding: '0.8em', borderRadius: '8px', border: '1px solid #e8ddd8' }} />
+                </div>
+                <div style={{ flex: '1 1 33%' }}>
+                  <label style={{ display: 'block', marginBottom: '0.4em', fontWeight: 700, color: '#4a5d52', fontSize: '0.95em' }}>H</label>
+                  <input type="number" placeholder="Height" value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} style={{ width: '100%', padding: '0.8em', borderRadius: '8px', border: '1px solid #e8ddd8' }} />
+                </div>
+              </div>
+
               {/* Images Section */}
               <div style={{ marginTop: '2.5em', paddingTop: '2.5em', borderTop: '1px solid rgba(244, 169, 168, 0.2)' }}>
                 <label style={{ display: 'block', marginBottom: '0.25em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>📸 Product Images</label>
@@ -539,55 +841,7 @@ export default function AdminDashboard() {
                   </div>
                 )}
 
-                {/* URL Paste Section */}
-                <details style={{ marginBottom: '0' }}>
-                  <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#2f333b', padding: '1em 1.2em', background: '#f8f7f5', borderRadius: '8px', fontSize: '0.95em', transition: 'all 0.3s ease', userSelect: 'none' }}>
-                    + Paste image URLs (optional)
-                  </summary>
-                  <div style={{ paddingTop: '1.5em', paddingBottom: '0' }}>
-                    <p style={{ fontSize: '0.9em', color: '#919499', marginBottom: '1em' }}>Paste external image URLs (from ibb.co, imgur, etc.)</p>
-                    <div style={{ display: 'flex', gap: '0.75em', marginBottom: '1.5em' }}>
-                      <input
-                        type="text"
-                        placeholder="https://i.ibb.co/..."
-                        value={imageInput}
-                        onChange={(e) => setImageInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImage())}
-                        style={{ flex: 1, padding: '0.9em 1.2em', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '1em', background: '#fafafa', color: '#484d55', boxSizing: 'border-box', outline: 'none', transition: 'all 0.3s ease' }}
-                        onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#e97770'; e.target.style.boxShadow = '0 0 0 3px rgba(233, 119, 112, 0.06)'; }}
-                        onBlur={(e) => { e.target.style.background = '#fafafa'; e.target.style.borderColor = '#e0e0e0'; e.target.style.boxShadow = 'none'; }}
-                      />
-                      <button type="button" onClick={handleAddImage} style={{ padding: '0.9em 1.8em', background: '#e97770', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '0.9em', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'nowrap' }}
-                        onMouseEnter={(e) => { e.target.style.background = '#d95f56'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 12px rgba(233, 119, 112, 0.3)'; }}
-                        onMouseLeave={(e) => { e.target.style.background = '#e97770'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = 'none'; }}
-                      >
-                        Add URL
-                      </button>
-                    </div>
 
-                    {form.imageUrls.length > 0 && (
-                      <div>
-                        <p style={{ fontSize: '0.9em', fontWeight: 600, color: '#2f333b', marginBottom: '1em' }}>Pasted URLs ({form.imageUrls.length})</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '1.2em' }}>
-                          {form.imageUrls.map((url, index) => (
-                            <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#f3f3f3', border: '2px solid #919499' }}>
-                              <img src={url} alt={`Product ${index + 1}`} style={{ width: '100%', height: '110px', objectFit: 'cover' }} />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveImage(index)}
-                                style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(217, 95, 86, 0.95)', color: '#fff', border: 'none', borderRadius: '50%', width: '28px', height: '28px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', transition: 'all 0.2s ease' }}
-                                onMouseEnter={(e) => { e.target.style.background = 'rgba(233, 119, 112, 0.95)'; e.target.style.transform = 'scale(1.1)'; }}
-                                onMouseLeave={(e) => { e.target.style.background = 'rgba(217, 95, 86, 0.95)'; e.target.style.transform = 'scale(1)'; }}
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </details>
               </div>
 
               {/* Action Buttons */}

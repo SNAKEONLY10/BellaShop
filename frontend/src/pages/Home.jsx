@@ -10,6 +10,7 @@ export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [bestSellerProducts, setBestSellerProducts] = useState([]);
   const [highlightedProducts, setHighlightedProducts] = useState([]);
+  const [soldProducts, setSoldProducts] = useState([]);
   const [openLogin, setOpenLogin] = useState(false);
   const [openProduct, setOpenProduct] = useState(null);
   const [productImageIndex, setProductImageIndex] = useState(0);
@@ -19,17 +20,20 @@ export default function Home() {
     Promise.all([
       apiClient.get('/api/products/featured'),
       apiClient.get('/api/products/bestsellers'),
-      apiClient.get('/api/products/highlighted')
-    ]).then(([featRes, bestRes, highlightRes]) => {
+      apiClient.get('/api/products/highlighted'),
+      apiClient.get('/api/products/sold/all')
+    ]).then(([featRes, bestRes, highlightRes, soldRes]) => {
       if (!mounted) return;
       setFeaturedProducts(Array.isArray(featRes.data) ? featRes.data : []);
       setBestSellerProducts(Array.isArray(bestRes.data) ? bestRes.data : []);
       setHighlightedProducts(Array.isArray(highlightRes.data) ? highlightRes.data : []);
+      setSoldProducts(Array.isArray(soldRes.data) ? soldRes.data : []);
     }).catch(() => {
       if (!mounted) return;
       setFeaturedProducts([]);
       setBestSellerProducts([]);
       setHighlightedProducts([]);
+      setSoldProducts([]);
     });
     return () => { mounted = false; };
   }, []);
@@ -207,6 +211,10 @@ export default function Home() {
                     </p>
                   )}
 
+                  <p style={{ fontSize: '0.8em', color: '#a8bbb2', marginBottom: '0.8em' }}>
+                    Posted {product.createdAt ? new Date(product.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                  </p>
+
                   <p style={{ fontSize: '1.25em', fontWeight: 800, color: '#f4a9a8', marginTop: '1em' }}>
                     ₱{Math.round(product.price).toLocaleString()}
                   </p>
@@ -292,6 +300,34 @@ export default function Home() {
           </ul>
         </div>
       </section>
+
+      {/* Sold Items Gallery (Home) */}
+      {soldProducts.length > 0 && (
+        <section style={{ background: 'linear-gradient(135deg, #fff8f6 0%, #faf9f7 100%)', padding: '5em 0' }}>
+          <div className="container">
+            <header style={{ textAlign: 'center', marginBottom: '2.5em' }}>
+              <p style={{ fontSize: '0.9em', color: '#f4a9a8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.6em', fontFamily: '"Crimson Text", serif' }}>🪧 Sold Items</p>
+              <h2 style={{ fontSize: '2em', color: '#4a5d52', fontWeight: 800, marginBottom: '0.4em', fontFamily: '"Playfair Display", serif' }}>Recently Sold</h2>
+              <p style={{ color: '#7a8d84' }}>A curated gallery of sold pieces — for reference and provenance.</p>
+            </header>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+              {soldProducts.map((p) => (
+                <div key={p.id} onClick={() => { setProductImageIndex(0); setOpenProduct(p); }} style={{ cursor: 'pointer', background: '#fff', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(244,169,168,0.12)', boxShadow: '0 6px 18px rgba(74,93,82,0.04)' }}>
+                  <div style={{ height: 160, background: '#f6f4f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={p.imageUrls?.[0] || 'https://via.placeholder.com/300x200'} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  <div style={{ padding: '0.8em' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.95em', color: '#3d5247', fontWeight: 800 }}>{p.name}</h4>
+                    <p style={{ margin: '0.35em 0', color: '#7a8d84', fontSize: '0.8em' }}>{p.category}</p>
+                    <p style={{ margin: 0, color: '#a8bbb2', fontSize: '0.78em' }}>Sold on {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* You May Also Like Section */}
       {highlightedProducts.length > 0 && (

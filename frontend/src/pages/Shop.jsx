@@ -9,6 +9,11 @@ export default function Shop() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [sortOption, setSortOption] = useState('default');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [loading, setLoading] = useState(true);
   const [openLogin, setOpenLogin] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -58,6 +63,67 @@ export default function Shop() {
     return () => obs.disconnect();
   }, [products]);
 
+  // debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setSelectedSuggestionIndex(-1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // build autocomplete suggestions from product names + categories
+  useEffect(() => {
+    const q = (debouncedSearchTerm || '').trim().toLowerCase();
+    if (!q) {
+      setSuggestions([]);
+      return;
+    }
+    const items = [];
+    products.forEach((p) => {
+      if (p.name) items.push(p.name);
+      if (p.category) items.push(p.category);
+    });
+    const uniq = [...new Set(items.map(s => s.trim()).filter(Boolean))];
+    const matched = uniq.filter(s => s.toLowerCase().startsWith(q)).slice(0, 8);
+    setSuggestions(matched);
+  }, [debouncedSearchTerm, products]);
+
+  // keyboard navigation for suggestions
+  const handleSearchKeyDown = (e) => {
+    if (suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+      e.preventDefault();
+      setSearchTerm(suggestions[selectedSuggestionIndex]);
+      setSuggestions([]);
+    } else if (e.key === 'Escape') {
+      setSuggestions([]);
+      setSelectedSuggestionIndex(-1);
+    }
+  };
+
+  const displayedProducts = products
+    .filter(p => {
+      // Hide sold items on Shop
+      if (p.status === 'Sold') return false;
+      const inCategory = selectedCategory ? p.category === selectedCategory : true;
+      if (!debouncedSearchTerm) return inCategory;
+      const q = debouncedSearchTerm.toLowerCase();
+      return inCategory && ((p.name || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q));
+    })
+    .slice()
+    .sort((a, b) => {
+      if (sortOption === 'price-asc') return (Number(a.price) || 0) - (Number(b.price) || 0);
+      if (sortOption === 'price-desc') return (Number(b.price) || 0) - (Number(a.price) || 0);
+      return 0;
+    });
+
   const openGallery = (product) => {
     setSelectedProduct(product);
     setCurrentImageIndex(0);
@@ -97,7 +163,8 @@ export default function Shop() {
           {categories.length > 0 && (
             <div style={{ marginBottom: '3em', paddingBottom: '2em', borderBottom: '2px solid rgba(244, 169, 168, 0.15)' }}>
               <p style={{ fontSize: '0.9em', color: '#f4a9a8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '1.2em', fontFamily: '"Crimson Text", serif' }}>📂 Filter by Category</p>
-              <div style={{ display: 'flex', gap: '0.8em', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.8em', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.8em', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => setSelectedCategory(null)}
                   style={{
@@ -163,6 +230,33 @@ export default function Shop() {
                     {category}
                   </button>
                 ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.8em', alignItems: 'center', marginLeft: 'auto' }}>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={handleSearchKeyDown}
+                      placeholder="Search products..."
+                      style={{ padding: '0.6em 1em', borderRadius: '10px', border: '1px solid #e8ddd8', background: '#faf9f7', color: '#4a5d52', fontFamily: '"Crimson Text", serif', minWidth: '220px' }}
+                    />
+                    {suggestions.length > 0 && (
+                      <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, background: '#fff', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '10px', boxShadow: '0 8px 20px rgba(74,93,82,0.08)', zIndex: 60, overflow: 'hidden' }}>
+                        {suggestions.map((s, idx) => (
+                          <div key={s} onMouseDown={() => { setSearchTerm(s); setSuggestions([]); }} onMouseEnter={() => setSelectedSuggestionIndex(idx)} style={{ padding: '0.6em 0.9em', cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.03)', fontFamily: '"Crimson Text", serif', color: selectedSuggestionIndex === idx ? '#fff' : '#4a5d52', background: selectedSuggestionIndex === idx ? 'linear-gradient(135deg, #f4a9a8, #e8918e)' : 'transparent' }}>
+                            {s}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <select value={sortOption} onChange={(e) => setSortOption(e.target.value)} style={{ padding: '0.6em 0.9em', borderRadius: '8px', border: '1px solid #e8ddd8', background: 'linear-gradient(135deg, #fff, #fbf9f7)', fontSize: '0.95em', color: '#4a5d52', fontFamily: '"Crimson Text", serif' }}>
+                    <option value="default">Sort: Default</option>
+                    <option value="price-asc">Price: Low → High</option>
+                    <option value="price-desc">Price: High → Low</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
@@ -197,7 +291,7 @@ export default function Shop() {
               gap: '2em', 
               marginTop: '2em'
             }}>
-              {products.filter(p => selectedCategory ? p.category === selectedCategory : true).map((product) => (
+              {displayedProducts.map((product) => (
                 <div key={product.id} onClick={() => openGallery(product)} style={{ cursor: 'pointer', transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
                   <article style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(74, 93, 82, 0.08)', border: '1px solid rgba(244, 169, 168, 0.15)', transition: 'all 0.3s ease' }}
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(74, 93, 82, 0.15)'; }}
@@ -231,6 +325,7 @@ export default function Shop() {
                       </h3>
                       <p style={{ fontSize: '0.8em', color: '#7a8d84', marginBottom: '0.6em', fontFamily: '"Crimson Text", serif' }}>
                         {product.category}
+                        <span style={{ display: 'block', fontSize: '0.75em', color: '#a8bbb2', marginTop: '0.35em' }}>Posted {product.createdAt ? new Date(product.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : ''}</span>
                       </p>
                       <p style={{ fontWeight: 700, color: '#f4a9a8', fontSize: '1.1em', marginBottom: '0.4em', fontFamily: '"Playfair Display", serif' }}>
                         ₱{product.price?.toLocaleString() || 'Contact'}

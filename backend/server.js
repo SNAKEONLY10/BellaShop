@@ -7,7 +7,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { eq } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 import { db } from './db.js';
 import { admin as adminTable, products } from './schema.js';
 import authRoutes from './routes/authRoutes.js';
@@ -76,11 +76,16 @@ async function startServer() {
         subcategory TEXT,
         condition TEXT,
         imageUrls TEXT,
+        status TEXT DEFAULT 'Available',
+        length REAL,
+        width REAL,
+        height REAL,
         isFeatured INTEGER DEFAULT 0,
         isBestSeller INTEGER DEFAULT 0,
         isHighlighted INTEGER DEFAULT 0,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        soldAt DATETIME
       )
     `);
 
@@ -95,6 +100,26 @@ async function startServer() {
       if (!existing.includes('isHighlighted')) {
         await db.run(`ALTER TABLE products ADD COLUMN isHighlighted INTEGER DEFAULT 0`);
         console.log('✓ Added column isHighlighted');
+      }
+      if (!existing.includes('status')) {
+        await db.run(`ALTER TABLE products ADD COLUMN status TEXT DEFAULT 'Available'`);
+        console.log('✓ Added column status');
+      }
+      if (!existing.includes('length')) {
+        await db.run(`ALTER TABLE products ADD COLUMN length REAL`);
+        console.log('✓ Added column length');
+      }
+      if (!existing.includes('width')) {
+        await db.run(`ALTER TABLE products ADD COLUMN width REAL`);
+        console.log('✓ Added column width');
+      }
+      if (!existing.includes('height')) {
+        await db.run(`ALTER TABLE products ADD COLUMN height REAL`);
+        console.log('✓ Added column height');
+      }
+      if (!existing.includes('soldAt')) {
+        await db.run(`ALTER TABLE products ADD COLUMN soldAt DATETIME`);
+        console.log('✓ Added column soldAt');
       }
     } catch (mErr) {
       // Non-fatal migration error — log and continue
@@ -120,6 +145,44 @@ async function startServer() {
     } catch (err) {
       console.error('Failed to create default admin:', err);
     }
+
+    // Scheduled task: Delete sold products older than 1 month (runs daily)
+    const deleteOldSoldItems = async () => {
+      try {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        
+        // Delete products marked as sold before 1 month ago
+        const result = await db.delete(products)
+          .where(
+            and(
+              eq(products.status, 'Sold'),
+              lt(products.soldAt, oneMonthAgo)
+            )
+          );
+        
+        console.log(`✓ Auto-cleanup: Deleted ${result.changes} old sold products`);
+      } catch (err) {
+        console.error('Error during auto-cleanup of sold items:', err);
+      }
+    };
+
+    // Run cleanup daily at midnight
+    const scheduleCleanup = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      
+      const msUntilMidnight = tomorrow - now;
+      setTimeout(() => {
+        deleteOldSoldItems();
+        // Then run daily
+        setInterval(deleteOldSoldItems, 24 * 60 * 60 * 1000);
+      }, msUntilMidnight);
+    };
+    
+    scheduleCleanup();
 
     // Start server with EADDRINUSE resilience: try next ports up to attempts limit
     const maxRetries = 5;

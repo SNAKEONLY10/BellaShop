@@ -1,10 +1,53 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export default function ProductModal({ product, currentIndex = 0, onClose, setIndex }) {
   if (!product) return null;
 
+  const [zoom, setZoom] = useState(false);
+  const [hoverZoom, setHoverZoom] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [touchDistance, setTouchDistance] = useState(0);
+  const imgRef = useRef(null);
+
   // Responsive grid: 1 column on mobile (< 768px), 2 columns on larger screens
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // Desktop hover zoom handler
+  const handleMouseMove = (e) => {
+    if (!imgRef.current) return;
+    const rect = imgRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setMousePos({ x, y });
+  };
+
+  // Mobile touch zoom handler (pinch to zoom)
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+      setTouchDistance(dist);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
+      const newZoom = Math.min(3, Math.max(1, zoomLevel + (dist - touchDistance) * 0.01));
+      setZoomLevel(newZoom);
+      setTouchDistance(dist);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (zoomLevel <= 1) {
+      setZoomLevel(1);
+    }
+  };
 
   return (
     <div 
@@ -61,17 +104,76 @@ export default function ProductModal({ product, currentIndex = 0, onClose, setIn
             borderRight: '1px solid rgba(244, 169, 168, 0.15)'
           }}
         >
-          <div style={{ textAlign: 'center' }}>
-            <img 
-              src={product.imageUrls?.[currentIndex] || product.imageUrl || 'https://via.placeholder.com/600x500'} 
-              alt={product.name} 
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: 350, 
-                objectFit: 'contain',
-                borderRadius: 12
-              }} 
-            />
+            <div style={{ textAlign: 'center', position: 'relative', overflow: 'hidden', borderRadius: 12 }}>
+            {/* Main Product Image with Hover Zoom */}
+            <div
+              ref={imgRef}
+              onMouseEnter={() => !isMobile && setHoverZoom(true)}
+              onMouseLeave={() => !isMobile && setHoverZoom(false)}
+              onMouseMove={handleMouseMove}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              style={{
+                position: 'relative',
+                overflow: 'hidden',
+                borderRadius: 12,
+                backgroundColor: '#f5f0f0',
+                cursor: !isMobile && hoverZoom ? 'zoom-in' : 'pointer',
+                width: '100%',
+                height: 350,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <img 
+                src={product.imageUrls?.[currentIndex] || product.imageUrl || 'https://via.placeholder.com/600x500'} 
+                alt={product.name}
+                onClick={() => isMobile && setZoom(true)}
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  transform: hoverZoom ? `scale(1.5)` : `scale(${zoomLevel})`,
+                  transformOrigin: `${mousePos.x}% ${mousePos.y}%`,
+                  transition: hoverZoom ? 'none' : 'transform 0.2s ease',
+                  cursor: isMobile ? 'grab' : 'zoom-in'
+                }} 
+              />
+              
+              {/* Magnifying Glass Overlay */}
+              {hoverZoom && !isMobile && (
+                <div style={{
+                  position: 'absolute',
+                  width: 100,
+                  height: 100,
+                  border: '2px solid rgba(244, 169, 168, 0.6)',
+                  borderRadius: '50%',
+                  pointerEvents: 'none',
+                  left: `${mousePos.x}%`,
+                  top: `${mousePos.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  boxShadow: 'inset 0 0 20px rgba(244, 169, 168, 0.3)'
+                }} />
+              )}
+            </div>
+
+            {/* Fullscreen Zoom Modal for Mobile */}
+            {zoom && (
+              <div onClick={() => setZoom(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1600, cursor: 'zoom-out', padding: '1em' }}>
+                <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '95vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img 
+                    src={product.imageUrls?.[currentIndex] || product.imageUrl || 'https://via.placeholder.com/1200x900'} 
+                    alt={product.name} 
+                    style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', borderRadius: 6, transform: `scale(${zoomLevel})`, transformOrigin: 'center' }}
+                  />
+                  <div style={{ position: 'absolute', top: 20, right: 20, color: '#fff', fontSize: '1.5em', cursor: 'pointer', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    ✕
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Image Thumbnails */}
             {product.imageUrls && product.imageUrls.length > 1 && (
@@ -117,6 +219,23 @@ export default function ProductModal({ product, currentIndex = 0, onClose, setIn
               {product.name}
             </h1>
 
+            {/* Status & Date Posted */}
+            <div style={{ marginTop: '0.6em', display: 'flex', gap: '0.8em', alignItems: 'center' }}>
+              <div style={{ padding: '0.25em 0.6em', borderRadius: 16, fontWeight: 700, fontSize: '0.8em', color: '#fff', background: product.status === 'Sold' ? '#6b7280' : '#f4a9a8' }}>
+                {product.status || 'Available'}
+              </div>
+              <div style={{ fontSize: '0.85em', color: '#7a8d84' }}>
+                Posted {product.datePosted ? new Date(product.datePosted).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : product.createdAt ? new Date(product.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }) : ''}
+              </div>
+            </div>
+
+            {/* Size / Dimensions */}
+            { (product.length || product.width || product.height) && (
+              <div style={{ marginTop: '0.8em' }}>
+                <p style={{ margin: 0, fontSize: '0.85em', color: '#7a8d84', fontWeight: 700 }}>Size</p>
+                <p style={{ margin: 0, color: '#5a6b65' }}>{`L-${product.length || '-'} × W-${product.width || '-'} × H-${product.height || '-'}`}</p>
+              </div>
+            )}
             {/* Category & Condition */}
             <div style={{ marginTop: '1em', display: 'flex', gap: '1.2em' }}>
               {product.category && (
