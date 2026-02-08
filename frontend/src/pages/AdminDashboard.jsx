@@ -209,96 +209,100 @@ export default function AdminDashboard() {
   // New behavior: produce 2–3 sentences that include condition, material/build, style, size/features, and purpose/benefit.
   // Avoid repeating the product name; prefer natural, informative phrasing.
   const generateDescription = () => {
-    const cond = (form.condition || '').trim();
-    const details = (form.conditionDetails || '').trim();
-    const pool = pickPool(form.category || '');
-    const shuffled = shuffle(pool);
+    const maxAttempts = 6;
+    let attempt = 0;
+    const prev = (form.description || '').trim();
 
-    // Helpers to extract material/style/feature hints from short inputs
-    const inferMaterial = () => {
-      // try conditionDetails then subcategory then name
-      const src = (details || form.subcategory || form.name || '').toLowerCase();
-      if (!src) return '';
-      if (src.includes('wood')) return 'solid wood';
-      if (src.includes('metal')) return 'metal';
-      if (src.includes('steel')) return 'stainless steel';
-      if (src.includes('rattan')) return 'rattan';
-      if (src.includes('fabric') || src.includes('upholstered')) return 'fabric-upholstered';
-      if (src.includes('leather')) return 'leather';
-      return ''; 
+    const makeOne = () => {
+      const cond = (form.condition || '').trim();
+      const details = (form.conditionDetails || '').trim();
+      const pool = pickPool(form.category || '');
+      const shuffled = shuffle(pool);
+
+      const inferMaterial = () => {
+        const src = (details || form.subcategory || form.name || '').toLowerCase();
+        if (!src) return '';
+        if (src.includes('wood')) return 'solid wood';
+        if (src.includes('metal')) return 'metal';
+        if (src.includes('steel')) return 'stainless steel';
+        if (src.includes('rattan')) return 'rattan';
+        if (src.includes('fabric') || src.includes('upholstered')) return 'fabric-upholstered';
+        if (src.includes('leather')) return 'leather';
+        return '';
+      };
+
+      const inferStyle = () => {
+        const c = (form.category || '').toLowerCase();
+        if (c.includes('sofa') || c.includes('couch')) return 'comfort-focused';
+        if (c.includes('wardrobe') || c.includes('cabinet')) return 'classic';
+        if (c.includes('kitchen') || c.includes('appliance')) return 'practical';
+        return '';
+      };
+
+      const material = inferMaterial();
+      const styleHint = inferStyle();
+
+      const parts = [];
+
+      // Sentence 1: integrate condition as clause + material/style + a pool sentence fragment
+      let prefix = '';
+      if (cond) prefix = cond === 'New' || cond.toLowerCase().includes('new') ? 'Brand new, ' : `In ${cond} condition, `;
+      const firstFragments = [];
+      if (material) firstFragments.push(material);
+      if (styleHint) firstFragments.push(styleHint);
+      if (shuffled.length > 0) firstFragments.push(shuffled[0]);
+      const sentence1 = (prefix + firstFragments.join(' ')).replace(/\s+/g, ' ').trim();
+      if (sentence1) parts.push(sentence1.endsWith('.') ? sentence1 : sentence1 + '.');
+
+      // Sentence 2: size/features + benefit
+      const sizeParts = [];
+      if (form.length || form.width || form.height) {
+        const dims = [];
+        if (form.length) dims.push(`L ${form.length}`);
+        if (form.width) dims.push(`W ${form.width}`);
+        if (form.height) dims.push(`H ${form.height}`);
+        sizeParts.push(`Dimensions ${dims.join(' × ')}`);
+      }
+      if (details) {
+        const short = details.length > 100 ? details.slice(0, 97).trim() + '...' : details;
+        sizeParts.push(short.charAt(0).toUpperCase() + short.slice(1));
+      }
+
+      const benefitMapping = (category) => {
+        const c = (category || '').toLowerCase();
+        if (c.includes('bike') || c.includes('bicycle') || c.includes('e-bike') || c.includes('electric')) return 'Perfect for commuting with efficient, eco-friendly performance.';
+        if (c.includes('sofa') || c.includes('couch')) return 'Great for relaxing and hosting with comfort.';
+        if (c.includes('wardrobe') || c.includes('cabinet')) return 'Helps organize your space while saving floor area.';
+        if (c.includes('kitchen') || c.includes('appliance')) return 'Engineered for reliable daily kitchen use.';
+        if (c.includes('table') || c.includes('desk')) return 'Versatile for work or dining in varied layouts.';
+        if (c.includes('display') || c.includes('divider')) return 'Perfect for display or partitioning with style.';
+        return shuffled.length > 1 ? shuffled[1] : 'Useful for practical everyday needs.';
+      };
+      const benefit = benefitMapping(form.category);
+
+      const sentence2 = ((sizeParts.join('. ') + (sizeParts.length ? '. ' : '')) + benefit).trim();
+      if (sentence2) parts.push(sentence2.endsWith('.') ? sentence2 : sentence2 + '.');
+
+      // Optionally add a short closer (rare)
+      if (Math.random() < 0.2) {
+        const closers = ['Built to last and designed to delight.', 'A reliable, stylish choice for everyday life.'];
+        parts.push(closers[Math.floor(Math.random() * closers.length)]);
+      }
+
+      // Limit to max 3 sentences
+      const joined = parts.join(' ');
+      const sentences = joined.split(/(?<=\.)\s+/).slice(0, 3).join(' ');
+      return sentences.trim();
     };
 
-    const inferStyle = () => {
-      const c = (form.category || '').toLowerCase();
-      if (c.includes('sofa') || c.includes('couch')) return 'comfort-focused';
-      if (c.includes('wardrobe') || c.includes('cabinet')) return 'classic';
-      if (c.includes('kitchen') || c.includes('appliance')) return 'practical';
-      return '';
-    };
-
-    const material = inferMaterial();
-    const styleHint = inferStyle();
-
-    // Build sentences: target 2 sentences (3rd optional)
-    const parts = [];
-
-    // Sentence 1: integrate condition subtly (not as its own sentence), then material/style and a leading pool sentence
-    const firstFragments = [];
-    let prefix = '';
-    if (cond) {
-      // Integrate condition as a clause rather than a standalone sentence
-      prefix = cond === 'New' || cond.toLowerCase().includes('new') ? 'Brand new' : `In ${cond} condition`;
+    let newDesc = '';
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      newDesc = makeOne();
+      if (newDesc && newDesc !== prev) break;
     }
-    if (prefix) prefix = prefix + ', ';
-    if (material) firstFragments.push(material);
-    if (styleHint) firstFragments.push(styleHint);
-    // use a strong pool sentence fragment if available
-    if (shuffled.length > 0) firstFragments.push(shuffled[0]);
-    let sentence1 = (prefix + firstFragments.join(' ')).replace(/\s+/g, ' ').trim();
-    if (sentence1) parts.push(sentence1.endsWith('.') ? sentence1 : sentence1 + '.');
-
-    // Sentence 2: size/features + purpose/benefit (try to extract length/width/height or features in details)
-    const sizeParts = [];
-    if (form.length || form.width || form.height) {
-      const dims = [];
-      if (form.length) dims.push(`L ${form.length}`);
-      if (form.width) dims.push(`W ${form.width}`);
-      if (form.height) dims.push(`H ${form.height}`);
-      sizeParts.push(`Dimensions: ${dims.join(' × ')}.`);
-    }
-    if (details) {
-      // Shorten details into one clause
-      const short = details.length > 120 ? details.slice(0, 117).trim() + '...' : details;
-      sizeParts.push(short.charAt(0).toUpperCase() + short.slice(1) + (short.endsWith('.') ? '' : '.'));
-    }
-
-    // Purpose/benefit: choose a category-appropriate benefit
-    const benefitMapping = (category) => {
-      const c = (category || '').toLowerCase();
-      if (c.includes('bike') || c.includes('bicycle') || c.includes('e-bike') || c.includes('electric')) return 'Perfect for commuting, offering efficient and eco-friendly transport.';
-      if (c.includes('sofa') || c.includes('couch')) return 'Great for relaxing and hosting guests with comfort.';
-      if (c.includes('wardrobe') || c.includes('cabinet')) return 'Helps keep your home organized while saving space.';
-      if (c.includes('kitchen') || c.includes('appliance')) return 'Built for practical daily use in busy kitchens.';
-      if (c.includes('table') || c.includes('desk')) return 'Versatile for work or dining, fitting many room layouts.';
-      if (c.includes('display') || c.includes('divider')) return 'Ideal for display or partitioning, combining function with style.';
-      return shuffled.length > 1 ? shuffled[1] : 'Ideal for practical everyday use.';
-    };
-    const benefit = benefitMapping(form.category);
-
-    const sentence2 = (sizeParts.join(' ') + ' ' + benefit).trim();
-    if (sentence2) parts.push(sentence2.endsWith('.') ? sentence2 : sentence2 + '.');
-
-    // Optional third polished closer with low probability
-    if (Math.random() < 0.25) {
-      const closers = [
-        'A tasteful, long-lasting choice for mindful living.',
-        'Built to last and designed to delight.'
-      ];
-      parts.push(closers[Math.floor(Math.random() * closers.length)]);
-    }
-
-    const description = parts.join(' ');
-    setForm(prev => ({ ...prev, description }));
+    if (!newDesc) newDesc = prev; // fallback
+    setForm(prevState => ({ ...prevState, description: newDesc }));
   };
 
   const fetchSoldProducts = async () => {
