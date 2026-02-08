@@ -37,6 +37,7 @@ export const getProduct = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     const { name, description, price, category, subcategory, condition, imageUrls, status, length, width, height } = req.body;
+    const conditionDetails = req.body.conditionDetails || null;
 
     console.log('📝 Creating product...');
     console.log('Body fields:', { name, price, category });
@@ -94,6 +95,7 @@ export const createProduct = async (req, res) => {
       isHighlighted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
+      conditionDetails: conditionDetails || null,
     });
 
     console.log('✓ Product saved to DB, ID:', result.lastInsertRowid);
@@ -106,6 +108,7 @@ export const createProduct = async (req, res) => {
       category, 
       subcategory, 
       condition,
+      conditionDetails: conditionDetails || null,
       status: status || 'Available',
       length: length ? parseFloat(length) : null,
       width: width ? parseFloat(width) : null,
@@ -124,7 +127,7 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, category, subcategory, condition, imageUrls, status, length, width, height } = req.body;
+    const { name, description, price, category, subcategory, condition, imageUrls, status, length, width, height, conditionDetails } = req.body;
 
     console.log('📝 Updating product:', id);
     console.log('Files received:', req.files?.length || 0);
@@ -167,6 +170,7 @@ export const updateProduct = async (req, res) => {
         length: length ? parseFloat(length) : null,
         width: width ? parseFloat(width) : null,
         height: height ? parseFloat(height) : null,
+        conditionDetails: conditionDetails || null,
         isBestSeller: req.body.isBestSeller ? true : false,
         updatedAt: new Date(),
       })

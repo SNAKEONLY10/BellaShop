@@ -47,7 +47,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT) || 5000;
 
 // DB + Server
 async function startServer() {
@@ -117,6 +117,10 @@ async function startServer() {
         await db.run(`ALTER TABLE products ADD COLUMN height REAL`);
         console.log('✓ Added column height');
       }
+      if (!existing.includes('conditionDetails')) {
+        await db.run(`ALTER TABLE products ADD COLUMN conditionDetails TEXT`);
+        console.log('✓ Added column conditionDetails');
+      }
       if (!existing.includes('soldAt')) {
         await db.run(`ALTER TABLE products ADD COLUMN soldAt DATETIME`);
         console.log('✓ Added column soldAt');
@@ -124,6 +128,19 @@ async function startServer() {
     } catch (mErr) {
       // Non-fatal migration error — log and continue
       console.warn('Migration check failed:', mErr.message || mErr);
+    }
+
+    // Ensure description_pools table exists (check separately since it's not a product column)
+    try {
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS description_pools (
+          category TEXT PRIMARY KEY,
+          sentences TEXT
+        )
+      `);
+      console.log('✓ Ensured description_pools table exists');
+    } catch (poolErr) {
+      console.warn('Failed to ensure description_pools table:', poolErr.message || poolErr);
     }
 
     console.log('✓ Database tables ready');

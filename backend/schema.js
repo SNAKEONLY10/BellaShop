@@ -29,4 +29,5 @@ export const products = sqliteTable('products', {
   createdAt: integer('createdAt', { mode: 'timestamp' }).default(new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).default(new Date()),
   soldAt: integer('soldAt', { mode: 'timestamp' }), // Timestamp when marked as sold
+  conditionDetails: text('conditionDetails'),
 });

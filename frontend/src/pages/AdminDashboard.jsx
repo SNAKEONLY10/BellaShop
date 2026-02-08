@@ -3,6 +3,7 @@ import apiClient from '../api/client.js';
 import FeaturedManager from './FeaturedManager';
 import BestsellerManager from './BestsellerManager';
 import YouMayAlsoLikeManager from './YouMayAlsoLikeManager';
+import DescriptionPoolsEditor from '../components/DescriptionPoolsEditor';
 
 export default function AdminDashboard() {
   const [view, setView] = useState('inventory');
@@ -494,6 +495,7 @@ export default function AdminDashboard() {
             { id: 'bestsellers', label: '🏆 6 Bestsellers', icon: '🏆' },
             { id: 'featured', label: '✨ Featured Slider', icon: '✨' },
             { id: 'youmayalsolike', label: '🌸 You May Also Like', icon: '🌸' },
+            { id: 'settings', label: '⚙️ Settings', icon: '⚙️' },
           ].map((item) => (
             <button key={item.id} onClick={() => setView(item.id)} style={{ width: '100%', padding: '1.1em 1.2em', background: view === item.id ? 'rgba(244, 169, 168, 0.15)' : 'transparent', color: view === item.id ? '#f4a9a8' : 'rgba(255,255,255,0.7)', border: 'none', borderLeft: view === item.id ? '3px solid #f4a9a8' : '3px solid transparent', borderRadius: '0 6px 6px 0', fontSize: '0.95em', fontWeight: view === item.id ? 700 : 500, textAlign: 'left', cursor: 'pointer', transition: 'all 0.3s ease', marginBottom: '0.6em', fontFamily: '"Crimson Text", serif' }}>
               {item.label}
@@ -510,6 +512,14 @@ export default function AdminDashboard() {
           Logout
         </button>
       </aside>
+          {view === 'settings' && (
+            <div>
+              <div style={{ marginBottom: '2.5em' }}>
+                <p style={{ fontSize: '0.85em', color: '#f4a9a8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5em', fontFamily: '"Crimson Text", serif' }}>Settings</p>
+              </div>
+              <DescriptionPoolsEditor />
+            </div>
+          )}
 
       {/* Main Content */}
       <main style={{ padding: '3em 3em', overflowY: 'auto', maxHeight: '100vh', background: 'linear-gradient(135deg, #faf9f7 0%, #f5f3f0 100%)' }}>
