@@ -208,80 +208,178 @@ export default function AdminDashboard() {
     return [];
   };
 
-  // Generate fresh 2–3 sentence descriptions with completely different content each time
+  // Smart description generator using actual product data
   const generateDescription = () => {
     const prev = (form.description || '').trim();
+    const name = (form.name || '').trim();
+    const cat = (form.category || '').toLowerCase();
     const cond = (form.condition || '').trim();
     const details = (form.conditionDetails || '').trim();
-    const pool = pickPool(form.category || '');
-    const shuffled = shuffle(pool);
-    const s1 = shuffled[0] || '';
-    const s2 = shuffled[1] || '';
-    const s3 = shuffled[2] || '';
+    const len = (form.length || '').trim();
+    const w = (form.width || '').trim();
+    const h = (form.height || '').trim();
 
-    // 6 completely distinct templates to cycle through
+    // Category descriptions
+    const getCategoryPhrase = () => {
+      if (cat.includes('sofa') || cat.includes('couch')) return 'A comfortable seating piece';
+      if (cat.includes('wardrobe') || cat.includes('cabinet')) return 'A storage furniture piece';
+      if (cat.includes('table') || cat.includes('desk')) return 'A functional surface piece';
+      if (cat.includes('bed') || cat.includes('frame')) return 'A bedroom furniture piece';
+      if (cat.includes('chair') || cat.includes('stool')) return 'A seated furniture piece';
+      if (cat.includes('shelf') || cat.includes('display')) return 'A display and storage piece';
+      if (cat.includes('bike') || cat.includes('bicycle')) return 'A premium bicycle';
+      if (cat.includes('appliance') || cat.includes('kitchen')) return 'A kitchen appliance';
+      return 'A quality item';
+    };
+
+    const getConditionPhrase = () => {
+      if (cond === 'New') return 'Pristine, never used.';
+      if (cond.includes('Like New')) return 'Barely used, like new.';
+      if (cond === 'Used') return 'Well-maintained and functional.';
+      if (cond.includes('Well-Used')) return 'Gently worn with character.';
+      return 'In good condition.';
+    };
+
+    const buildDimensions = () => {
+      const dims = [];
+      if (len) dims.push(`L ${len}`);
+      if (w) dims.push(`W ${w}`);
+      if (h) dims.push(`H ${h}`);
+      return dims.length ? `Dimensions: ${dims.join(', ')}.` : '';
+    };
+
+    const getDetailPhrase = () => {
+      if (!details) return '';
+      const cap = details.charAt(0).toUpperCase() + details.slice(1);
+      return cap.endsWith('.') ? cap : cap + '.';
+    };
+
+    // 8 distinct, natural-sounding templates
     const templates = [
-      // T1: Direct + feature description
+      // T1: Category + specific feature + condition + benefit
       () => {
         const lines = [];
-        if (cond) lines.push(`${cond}${cond === 'New' ? '' : ' condition'}.`);
-        if (s1) lines.push(s1);
-        if (details) lines.push(details.charAt(0).toUpperCase() + details.slice(1) + (details.endsWith('.') ? '' : '.'));
-        return lines.filter(Boolean).slice(0, 3).join(' ');
+        if (name) {
+          lines.push(`${name} – ${getCategoryPhrase().toLowerCase()}. ${getConditionPhrase()}`);
+        } else {
+          lines.push(`${getCategoryPhrase()}. ${getConditionPhrase()}`);
+        }
+        if (getDetailPhrase()) lines.push(getDetailPhrase());
+        const dims = buildDimensions();
+        if (dims) lines.push(dims);
+        return lines.slice(0, 3).join(' ').trim();
       },
-      // T2: Feature-first + condition
+
+      // T2: Dimensions/specs first + condition + details
       () => {
         const lines = [];
-        if (s1) lines.push(s1);
-        if (s2) lines.push(s2);
-        if (cond) lines.push(`Available in ${cond} condition.`);
-        return lines.filter(Boolean).slice(0, 3).join(' ');
+        const dims = buildDimensions();
+        if (dims) lines.push(dims);
+        lines.push(getConditionPhrase());
+        if (name) lines.push(`This ${name} is a great addition to any space.`);
+        else lines.push(`${getCategoryPhrase()} ready for use.`);
+        return lines.slice(0, 3).join(' ').trim();
       },
-      // T3: Condition + pool + details/size
+
+      // T3: Feature-focused + condition + detail
       () => {
         const lines = [];
-        if (cond) lines.push(`${cond} condition.`);
-        if (s2) lines.push(s2);
-        const dimensions = [form.length && `L ${form.length}`, form.width && `W ${form.width}`, form.height && `H ${form.height}`].filter(Boolean);
-        if (dimensions.length) lines.push(`Dimensions: ${dimensions.join(', ')}.`);
-        if (!dimensions.length && details) lines.push(details.charAt(0).toUpperCase() + details.slice(1) + (details.endsWith('.') ? '' : '.'));
-        return lines.filter(Boolean).slice(0, 3).join(' ');
+        if (getDetailPhrase()) {
+          lines.push(getDetailPhrase());
+        } else if (name) {
+          lines.push(`${name} with excellent build quality.`);
+        } else {
+          lines.push(`${getCategoryPhrase().toLowerCase()} with solid construction.`);
+        }
+        lines.push(getConditionPhrase());
+        const dims = buildDimensions();
+        if (dims) lines.push(dims);
+        return lines.slice(0, 3).join(' ').trim();
       },
-      // T4: Multiple pool sentences
+
+      // T4: Condition-forward description
       () => {
         const lines = [];
-        if (s1) lines.push(s1);
-        if (s2) lines.push(s2);
-        if (s3) lines.push(s3);
-        return lines.filter(Boolean).slice(0, 3).join(' ');
+        lines.push(`${getConditionPhrase()}`);
+        if (name && getDetailPhrase()) {
+          lines.push(`${name}: ${getDetailPhrase().toLowerCase()}`);
+        } else if (name) {
+          lines.push(`The ${name} is fully functional and ready to use.`);
+        } else if (getDetailPhrase()) {
+          lines.push(getDetailPhrase());
+        }
+        const dims = buildDimensions();
+        if (dims) lines.push(dims);
+        return lines.slice(0, 3).join(' ').trim();
       },
-      // T5: Details first + condition + pool
+
+      // T5: Statement + specs + summary
       () => {
         const lines = [];
-        if (details) lines.push(details.charAt(0).toUpperCase() + details.slice(1) + (details.endsWith('.') ? '' : '.'));
-        if (cond) lines.push(`In ${cond} condition.`);
-        if (s1) lines.push(s1);
-        return lines.filter(Boolean).slice(0, 3).join(' ');
+        if (name) {
+          lines.push(`A ${cond ? cond.toLowerCase() : 'quality'} ${name}.`);
+        } else {
+          lines.push(`${getCategoryPhrase()}. ${getConditionPhrase()}`);
+        }
+        const dims = buildDimensions();
+        if (dims) lines.push(dims);
+        if (getDetailPhrase()) lines.push(getDetailPhrase());
+        return lines.slice(0, 3).join(' ').trim();
       },
-      // T6: Size/feature + condition + pool
+
+      // T6: Practical benefits focus
       () => {
         const lines = [];
-        const dimensions = [form.length && `L ${form.length}`, form.width && `W ${form.width}`, form.height && `H ${form.height}`].filter(Boolean);
-        if (dimensions.length) lines.push(`Dimensions: ${dimensions.join(', ')}.`);
-        if (cond) lines.push(`${cond} condition.`);
-        if (s1) lines.push(s1);
-        return lines.filter(Boolean).slice(0, 3).join(' ');
+        const catLower = cat.includes('sofa') ? 'seating' : cat.includes('cabinet') || cat.includes('wardrobe') ? 'storage' :
+                         cat.includes('table') || cat.includes('desk') ? 'workspace' : cat.includes('bed') ? 'bedroom' : 'living space';
+        if (cond === 'New') {
+          lines.push(`Brand new ${name || catLower + ' piece'}. Never used.`);
+        } else {
+          lines.push(`${getConditionPhrase()}`);
+        }
+        if (getDetailPhrase()) lines.push(getDetailPhrase());
+        const dims = buildDimensions();
+        if (dims) lines.push(dims);
+        return lines.slice(0, 3).join(' ').trim();
+      },
+
+      // T7: Direct specification
+      () => {
+        const lines = [];
+        const dims = buildDimensions();
+        if (dims) lines.push(dims);
+        if (name) lines.push(`${name}: ${getConditionPhrase()}`);
+        else lines.push(getConditionPhrase());
+        if (getDetailPhrase()) lines.push(getDetailPhrase());
+        return lines.slice(0, 3).join(' ').trim();
+      },
+
+      // T8: Quality-focused opening
+      () => {
+        const lines = [];
+        if (cond === 'New') {
+          lines.push(`Unopened, brand new ${name || 'item'}.`);
+        } else if (cond.includes('Like New')) {
+          lines.push(`Looks and functions like new.`);
+        } else {
+          lines.push(`Quality construction, well-cared for.`);
+        }
+        if (name && !cond.includes('New')) lines.push(`This ${name} is ${cond.toLowerCase().replace(' condition', '')} condition.`);
+        const dims = buildDimensions();
+        if (dims) lines.push(dims);
+        return lines.slice(0, 3).join(' ').trim();
       },
     ];
 
     let newDesc = '';
     let attempts = 0;
-    while (attempts < 10 && (!newDesc || newDesc === prev || newDesc === lastGeneratedDescription)) {
+    while (attempts < 10) {
       const tpl = templates[attempts % templates.length];
       newDesc = tpl().trim();
+      if (newDesc && newDesc !== prev && newDesc !== lastGeneratedDescription) break;
       attempts++;
     }
-    if (!newDesc) newDesc = 'A quality item.';
+    if (!newDesc) newDesc = 'A quality item ready for use.';
 
     setForm((s) => ({ ...s, description: newDesc }));
     setLastGeneratedDescription(newDesc);
