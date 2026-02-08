@@ -800,11 +800,11 @@ export default function AdminDashboard() {
                       setForm({ ...form, category: e.target.value });
                     }
                   }}
-                  style={{ flex: 1, fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: '#4a5d52', boxSizing: 'border-box', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
+                  style={{ flex: 1, fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: form.category ? '#4a5d52' : '#9aa09a', boxSizing: 'border-box', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
                   onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
                   onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
                 >
-                  <option value="">Select category...</option>
+                  <option value="" disabled>Select category...</option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
@@ -859,11 +859,11 @@ export default function AdminDashboard() {
               <select
                 value={form.condition}
                 onChange={(e) => setForm({ ...form, condition: e.target.value })}
-                style={{ width: '100%', fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: '#4a5d52', boxSizing: 'border-box', marginBottom: '1.5em', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
+                style={{ width: '100%', fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: form.condition ? '#4a5d52' : '#9aa09a', boxSizing: 'border-box', marginBottom: '1.5em', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
                 onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
                 onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
               >
-                <option value="">Select condition...</option>
+                <option value="" disabled>Select condition...</option>
                 <option value="New">New</option>
                 <option value="Like New">Like New</option>
                 <option value="Used">Used</option>
