@@ -206,27 +206,32 @@ export default function AdminDashboard() {
   };
 
   // Generate description rule-based (no external APIs)
+  // New behavior: avoid repeating the product name or a blunt "Condition:" line.
+  // Produce 1-3 concise sentences from the category pool, then optionally append condition details as a short note.
   const generateDescription = () => {
-    const name = (form.name || '').trim() || 'This item';
     const pool = pickPool(form.category || '');
     const shuffled = shuffle(pool);
-    const count = Math.random() < 0.5 ? 1 : 2; // pick 1-2 sentences
+    // Choose 1-3 sentences depending on pool size
+    let count = 1;
+    if (shuffled.length >= 3) count = 2 + (Math.random() < 0.25 ? 1 : 0); // usually 2, sometimes 3
+    else if (shuffled.length === 2) count = 2;
     const chosen = shuffled.slice(0, count);
 
-    // Build description parts
     const parts = [];
-    parts.push(`${name}.`);
     if (chosen.length > 0) parts.push(chosen.join(' '));
-    if (form.condition) parts.push(`Condition: ${form.condition}.`);
-    if (form.conditionDetails && form.conditionDetails.trim()) parts.push(`Notes: ${form.conditionDetails.trim()}.`);
 
-    // Small randomizer to avoid duplicates (adds phrasing variation)
-    const variants = [
-      'A timeless addition to your home.',
-      'A reliable choice for everyday use.',
-      'A tasteful piece that complements many interiors.'
+    // If there are condition details, append them as a short note (no explicit "Condition:" label)
+    if (form.conditionDetails && form.conditionDetails.trim()) {
+      parts.push(`Note: ${form.conditionDetails.trim()}.`);
+    }
+
+    // Add a polished closing sentence for confidence/usage when available
+    const closers = [
+      'A tasteful piece that complements many interiors.',
+      'Ready to be enjoyed in your home or showroom.',
+      'A functional and attractive addition to any space.'
     ];
-    if (Math.random() < 0.35) parts.push(variants[Math.floor(Math.random() * variants.length)]);
+    if (Math.random() < 0.5) parts.push(closers[Math.floor(Math.random() * closers.length)]);
 
     const description = parts.join(' ');
     setForm(prev => ({ ...prev, description }));
@@ -311,12 +316,10 @@ export default function AdminDashboard() {
       formData.append('price', form.price);
       formData.append('subcategory', form.subcategory || '');
       formData.append('condition', form.condition || '');
-      // Ensure condition details are included in description when saving
-      let finalDescription = form.description || '';
-      if (form.conditionDetails && !finalDescription.includes(form.conditionDetails)) {
-        finalDescription = `${finalDescription} Notes: ${form.conditionDetails}.`.trim();
-      }
-      formData.append('description', finalDescription);
+      // Do NOT duplicate condition details inside the description.
+      // Send description and conditionDetails separately so condition is stored in its own DB column.
+      formData.append('description', form.description || '');
+      formData.append('conditionDetails', form.conditionDetails || '');
       formData.append('length', form.length || '');
       formData.append('width', form.width || '');
       formData.append('height', form.height || '');
