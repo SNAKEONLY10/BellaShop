@@ -206,32 +206,83 @@ export default function AdminDashboard() {
   };
 
   // Generate description rule-based (no external APIs)
-  // New behavior: avoid repeating the product name or a blunt "Condition:" line.
-  // Produce 1-3 concise sentences from the category pool, then optionally append condition details as a short note.
+  // New behavior: produce 2–3 sentences that include condition, material/build, style, size/features, and purpose/benefit.
+  // Avoid repeating the product name; prefer natural, informative phrasing.
   const generateDescription = () => {
+    const cond = (form.condition || '').trim();
+    const details = (form.conditionDetails || '').trim();
     const pool = pickPool(form.category || '');
     const shuffled = shuffle(pool);
-    // Choose 1-3 sentences depending on pool size
-    let count = 1;
-    if (shuffled.length >= 3) count = 2 + (Math.random() < 0.25 ? 1 : 0); // usually 2, sometimes 3
-    else if (shuffled.length === 2) count = 2;
-    const chosen = shuffled.slice(0, count);
 
+    // Helpers to extract material/style/feature hints from short inputs
+    const inferMaterial = () => {
+      // try conditionDetails then subcategory then name
+      const src = (details || form.subcategory || form.name || '').toLowerCase();
+      if (!src) return '';
+      if (src.includes('wood')) return 'solid wood';
+      if (src.includes('metal')) return 'metal';
+      if (src.includes('steel')) return 'stainless steel';
+      if (src.includes('rattan')) return 'rattan';
+      if (src.includes('fabric') || src.includes('upholstered')) return 'fabric-upholstered';
+      if (src.includes('leather')) return 'leather';
+      return ''; 
+    };
+
+    const inferStyle = () => {
+      const c = (form.category || '').toLowerCase();
+      if (c.includes('sofa') || c.includes('couch')) return 'comfort-focused';
+      if (c.includes('wardrobe') || c.includes('cabinet')) return 'classic';
+      if (c.includes('kitchen') || c.includes('appliance')) return 'practical';
+      return '';
+    };
+
+    const material = inferMaterial();
+    const styleHint = inferStyle();
+
+    // Build sentences: target 2 sentences (3rd optional)
     const parts = [];
-    if (chosen.length > 0) parts.push(chosen.join(' '));
 
-    // If there are condition details, append them as a short note (no explicit "Condition:" label)
-    if (form.conditionDetails && form.conditionDetails.trim()) {
-      parts.push(`Note: ${form.conditionDetails.trim()}.`);
+    // Sentence 1: condition + material + style + a leading feature or pool sentence
+    const firstFragments = [];
+    if (cond) firstFragments.push(cond);
+    if (material) firstFragments.push(material);
+    if (styleHint) firstFragments.push(styleHint);
+    // use a strong pool sentence if available
+    if (shuffled.length > 0) firstFragments.push(shuffled[0]);
+    const sentence1 = firstFragments.join(' ').replace(/\s+/g, ' ').trim();
+    if (sentence1) parts.push(sentence1.endsWith('.') ? sentence1 : sentence1 + '.');
+
+    // Sentence 2: size/features + purpose/benefit (try to extract length/width/height or features in details)
+    const sizeParts = [];
+    if (form.length || form.width || form.height) {
+      const dims = [];
+      if (form.length) dims.push(`L ${form.length}`);
+      if (form.width) dims.push(`W ${form.width}`);
+      if (form.height) dims.push(`H ${form.height}`);
+      sizeParts.push(`Dimensions: ${dims.join(' × ')}.`);
+    }
+    if (details) {
+      // Shorten details into one clause
+      const short = details.length > 120 ? details.slice(0, 117).trim() + '...' : details;
+      sizeParts.push(short.charAt(0).toUpperCase() + short.slice(1) + (short.endsWith('.') ? '' : '.'));
     }
 
-    // Add a polished closing sentence for confidence/usage when available
-    const closers = [
-      'A tasteful piece that complements many interiors.',
-      'Ready to be enjoyed in your home or showroom.',
-      'A functional and attractive addition to any space.'
-    ];
-    if (Math.random() < 0.5) parts.push(closers[Math.floor(Math.random() * closers.length)]);
+    // Purpose/benefit: synthesize from pool or fallback phrasing
+    let benefit = '';
+    if (shuffled.length > 1) benefit = shuffled[1];
+    else benefit = 'Ideal for everyday use and enhancing your space.';
+
+    const sentence2 = (sizeParts.join(' ') + ' ' + benefit).trim();
+    if (sentence2) parts.push(sentence2.endsWith('.') ? sentence2 : sentence2 + '.');
+
+    // Optional third polished closer with low probability
+    if (Math.random() < 0.25) {
+      const closers = [
+        'A tasteful, long-lasting choice for mindful living.',
+        'Built to last and designed to delight.'
+      ];
+      parts.push(closers[Math.floor(Math.random() * closers.length)]);
+    }
 
     const description = parts.join(' ');
     setForm(prev => ({ ...prev, description }));
