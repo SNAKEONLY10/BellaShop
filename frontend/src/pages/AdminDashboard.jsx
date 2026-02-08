@@ -800,7 +800,8 @@ export default function AdminDashboard() {
                       setForm({ ...form, category: e.target.value });
                     }
                   }}
-                  style={{ flex: 1, fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: form.category ? '#4a5d52' : '#9aa09a', boxSizing: 'border-box', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
+                  title={form.category || ''}
+                  style={{ flex: 1, fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#fff', color: '#2f333b', boxSizing: 'border-box', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                   onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
                   onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
                 >
@@ -860,10 +861,11 @@ export default function AdminDashboard() {
               />
 
               <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Condition</label>
-              <select
+                <select
                 value={form.condition}
                 onChange={(e) => setForm({ ...form, condition: e.target.value })}
-                style={{ width: '100%', fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#faf9f7', color: form.condition ? '#4a5d52' : '#9aa09a', boxSizing: 'border-box', marginBottom: '1.5em', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em' }}
+                title={form.condition || ''}
+                style={{ width: '100%', fontSize: '1em', padding: '1em 1.2em', borderRadius: '8px', border: '1px solid #e8ddd8', background: '#fff', color: '#2f333b', boxSizing: 'border-box', marginBottom: '1.5em', outline: 'none', transition: 'all 0.3s ease', fontFamily: '"Crimson Text", serif', letterSpacing: '0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                 onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
                 onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
               >
