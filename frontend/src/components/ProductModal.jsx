@@ -25,6 +25,7 @@ export default function ProductModal({ product, currentIndex = 0, onClose, setIn
   // Mobile touch zoom handler (pinch to zoom)
   const handleTouchStart = (e) => {
     if (e.touches.length === 2) {
+      e.preventDefault();
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
@@ -34,16 +35,20 @@ export default function ProductModal({ product, currentIndex = 0, onClose, setIn
 
   const handleTouchMove = (e) => {
     if (e.touches.length === 2) {
+      e.preventDefault();
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const dist = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY);
-      const newZoom = Math.min(3, Math.max(1, zoomLevel + (dist - touchDistance) * 0.01));
+      const delta = dist - touchDistance;
+      const sensitivity = 0.005; // Reduced sensitivity for smooth zoom
+      const newZoom = Math.min(3, Math.max(1, zoomLevel + delta * sensitivity));
       setZoomLevel(newZoom);
       setTouchDistance(dist);
     }
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
     if (zoomLevel <= 1) {
       setZoomLevel(1);
     }
@@ -161,14 +166,79 @@ export default function ProductModal({ product, currentIndex = 0, onClose, setIn
 
             {/* Fullscreen Zoom Modal for Mobile */}
             {zoom && (
-              <div onClick={() => setZoom(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1600, cursor: 'zoom-out', padding: '1em' }}>
-                <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '95vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div 
+                onClick={() => setZoom(false)} 
+                style={{ 
+                  position: 'fixed', 
+                  inset: 0, 
+                  background: 'rgba(0,0,0,0.85)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  zIndex: 1600, 
+                  cursor: 'zoom-out', 
+                  padding: '1em',
+                  touchAction: 'none',
+                  userSelect: 'none',
+                  overflow: 'hidden'
+                }}
+                onTouchMove={(e) => e.preventDefault()}
+              >
+                <div 
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ 
+                    position: 'relative', 
+                    maxWidth: '100%', 
+                    maxHeight: '95vh', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    touchAction: 'none',
+                    overflow: 'hidden'
+                  }}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
                   <img 
                     src={product.imageUrls?.[currentIndex] || product.imageUrl || 'https://via.placeholder.com/1200x900'} 
                     alt={product.name} 
-                    style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', borderRadius: 6, transform: `scale(${zoomLevel})`, transformOrigin: 'center' }}
+                    style={{ 
+                      maxWidth: '95%', 
+                      maxHeight: '95%', 
+                      objectFit: 'contain', 
+                      borderRadius: 6, 
+                      transform: `scale(${zoomLevel})`, 
+                      transformOrigin: 'center',
+                      transition: 'transform 0.1s ease-out',
+                      userSelect: 'none',
+                      touchAction: 'none',
+                      WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none'
+                    }}
+                    onTouchStart={(e) => e.preventDefault()}
+                    onTouchMove={(e) => e.preventDefault()}
                   />
-                  <div style={{ position: 'absolute', top: 20, right: 20, color: '#fff', fontSize: '1.5em', cursor: 'pointer', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div 
+                    onClick={() => setZoom(false)}
+                    style={{ 
+                      position: 'absolute', 
+                      top: 20, 
+                      right: 20, 
+                      color: '#fff', 
+                      fontSize: '1.5em', 
+                      cursor: 'pointer', 
+                      background: 'rgba(0,0,0,0.5)', 
+                      borderRadius: '50%', 
+                      width: 40, 
+                      height: 40, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      userSelect: 'none',
+                      zIndex: 1700
+                    }}
+                  >
                     ✕
                   </div>
                 </div>
