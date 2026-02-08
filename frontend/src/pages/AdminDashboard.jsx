@@ -790,53 +790,44 @@ export default function AdminDashboard() {
               />
 
               <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Category</label>
-              <div style={{ display: 'flex', gap: '0.75em', marginBottom: '1.5em', alignItems: 'flex-start' }}>
-                <select
-                  value={form.category}
-                  onChange={(e) => {
-                    if (e.target.value === '__new__') {
-                      setShowNewCategoryInput(true);
-                    } else {
-                      setForm({ ...form, category: e.target.value });
-                    }
-                  }}
-                  title={form.category || ''}
-                  style={{
-                    flex: 1,
-                    fontSize: '1em',
-                    lineHeight: '1.4em',
-                    height: '48px',
-                    padding: '0.8em 1.2em',
-                    borderRadius: '8px',
-                    border: '1px solid #e8ddd8',
-                    background: '#fff',
-                    color: '#2f333b',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    transition: 'all 0.15s ease',
-                    fontFamily: '"Crimson Text", serif',
-                    letterSpacing: '0.01em',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: 'inline-block',
-                    verticalAlign: 'middle',
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none',
-                  }}
-                  onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
-                  onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
-                >
-                  <option value="" disabled>Select category...</option>
-                  {/* If the current category value isn't in the categories list, show it so it displays when editing */}
-                  {form.category && !categories.includes(form.category) && (
-                    <option value={form.category}>{form.category}</option>
-                  )}
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                  <option value="__new__">+ Add new category</option>
-                </select>
+              <div style={{ display: 'flex', gap: '0.75em', marginBottom: '1.5em', alignItems: 'center' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <input
+                    list="categories-list"
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    placeholder="Select or type category..."
+                    title={form.category || ''}
+                    style={{
+                      width: '100%',
+                      fontSize: '1em',
+                      lineHeight: '1.4em',
+                      height: '48px',
+                      padding: '0.8em 1.2em',
+                      borderRadius: '8px',
+                      border: '1px solid #e8ddd8',
+                      background: '#fff',
+                      color: '#2f333b',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      transition: 'all 0.15s ease',
+                      fontFamily: '"Crimson Text", serif',
+                      letterSpacing: '0.01em',
+                    }}
+                    onFocus={(e) => { e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244,169,168,0.07)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
+                  />
+                  <datalist id="categories-list">
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewCategoryInput(true)}
+                  style={{ padding: '0.9em 1.2em', background: '#f4a9a8', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
+                >+ Add</button>
               </div>
 
               {showNewCategoryInput && (
@@ -883,46 +874,39 @@ export default function AdminDashboard() {
               />
 
               <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Condition</label>
-                <select
-                value={form.condition}
-                onChange={(e) => setForm({ ...form, condition: e.target.value })}
-                title={form.condition || ''}
-                style={{
-                  width: '100%',
-                  fontSize: '1em',
-                  lineHeight: '1.4em',
-                  height: '48px',
-                  padding: '0.8em 1.2em',
-                  borderRadius: '8px',
-                  border: '1px solid #e8ddd8',
-                  background: '#fff',
-                  color: '#2f333b',
-                  boxSizing: 'border-box',
-                  marginBottom: '1.5em',
-                  outline: 'none',
-                  transition: 'all 0.15s ease',
-                  fontFamily: '"Crimson Text", serif',
-                  letterSpacing: '0.01em',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: 'inline-block',
-                  verticalAlign: 'middle',
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none',
-                }}
-                onFocus={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244, 169, 168, 0.1)'; }}
-                onBlur={(e) => { e.target.style.background = '#faf9f7'; e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
-              >
-                <option value="" disabled>Select condition...</option>
-                {form.condition && !['New','Like New','Used','Well-Used'].includes(form.condition) && (
-                  <option value={form.condition}>{form.condition}</option>
-                )}
-                <option value="New">New</option>
-                <option value="Like New">Like New</option>
-                <option value="Used">Used</option>
-                <option value="Well-Used">Well-Used</option>
-              </select>
+              <div style={{ marginBottom: '1.5em' }}>
+                <input
+                  list="condition-list"
+                  value={form.condition}
+                  onChange={(e) => setForm({ ...form, condition: e.target.value })}
+                  placeholder="Select or type condition..."
+                  title={form.condition || ''}
+                  style={{
+                    width: '100%',
+                    fontSize: '1em',
+                    lineHeight: '1.4em',
+                    height: '48px',
+                    padding: '0.8em 1.2em',
+                    borderRadius: '8px',
+                    border: '1px solid #e8ddd8',
+                    background: '#fff',
+                    color: '#2f333b',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    transition: 'all 0.15s ease',
+                    fontFamily: '"Crimson Text", serif',
+                    letterSpacing: '0.01em',
+                  }}
+                  onFocus={(e) => { e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244,169,168,0.07)'; }}
+                  onBlur={(e) => { e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
+                />
+                <datalist id="condition-list">
+                  <option value="New" />
+                  <option value="Like New" />
+                  <option value="Used" />
+                  <option value="Well-Used" />
+                </datalist>
+              </div>
 
               <label style={{ display: 'block', marginTop: '0.6em', marginBottom: '0.4em', fontWeight: 700, color: '#4a5d52', fontSize: '0.95em' }}>Condition Details (optional)</label>
               <input
