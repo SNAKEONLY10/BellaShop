@@ -33,6 +33,9 @@ export default function AdminDashboard() {
     width: '',
     height: '',
   });
+
+  // Keep last generated description to avoid repeats on repeated clicks
+  const [lastGeneratedDescription, setLastGeneratedDescription] = useState('');
   
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
@@ -205,104 +208,83 @@ export default function AdminDashboard() {
     return [];
   };
 
-  // Generate description rule-based (no external APIs)
-  // New behavior: produce 2–3 sentences that include condition, material/build, style, size/features, and purpose/benefit.
-  // Avoid repeating the product name; prefer natural, informative phrasing.
+  // Generate fresh 2–3 sentence descriptions with completely different content each time
   const generateDescription = () => {
-    const maxAttempts = 6;
-    let attempt = 0;
     const prev = (form.description || '').trim();
+    const cond = (form.condition || '').trim();
+    const details = (form.conditionDetails || '').trim();
+    const pool = pickPool(form.category || '');
+    const shuffled = shuffle(pool);
+    const s1 = shuffled[0] || '';
+    const s2 = shuffled[1] || '';
+    const s3 = shuffled[2] || '';
 
-    const makeOne = () => {
-      const cond = (form.condition || '').trim();
-      const details = (form.conditionDetails || '').trim();
-      const pool = pickPool(form.category || '');
-      const shuffled = shuffle(pool);
-
-      const inferMaterial = () => {
-        const src = (details || form.subcategory || form.name || '').toLowerCase();
-        if (!src) return '';
-        if (src.includes('wood')) return 'solid wood';
-        if (src.includes('metal')) return 'metal';
-        if (src.includes('steel')) return 'stainless steel';
-        if (src.includes('rattan')) return 'rattan';
-        if (src.includes('fabric') || src.includes('upholstered')) return 'fabric-upholstered';
-        if (src.includes('leather')) return 'leather';
-        return '';
-      };
-
-      const inferStyle = () => {
-        const c = (form.category || '').toLowerCase();
-        if (c.includes('sofa') || c.includes('couch')) return 'comfort-focused';
-        if (c.includes('wardrobe') || c.includes('cabinet')) return 'classic';
-        if (c.includes('kitchen') || c.includes('appliance')) return 'practical';
-        return '';
-      };
-
-      const material = inferMaterial();
-      const styleHint = inferStyle();
-
-      const parts = [];
-
-      // Sentence 1: integrate condition as clause + material/style + a pool sentence fragment
-      let prefix = '';
-      if (cond) prefix = cond === 'New' || cond.toLowerCase().includes('new') ? 'Brand new, ' : `In ${cond} condition, `;
-      const firstFragments = [];
-      if (material) firstFragments.push(material);
-      if (styleHint) firstFragments.push(styleHint);
-      if (shuffled.length > 0) firstFragments.push(shuffled[0]);
-      const sentence1 = (prefix + firstFragments.join(' ')).replace(/\s+/g, ' ').trim();
-      if (sentence1) parts.push(sentence1.endsWith('.') ? sentence1 : sentence1 + '.');
-
-      // Sentence 2: size/features + benefit
-      const sizeParts = [];
-      if (form.length || form.width || form.height) {
-        const dims = [];
-        if (form.length) dims.push(`L ${form.length}`);
-        if (form.width) dims.push(`W ${form.width}`);
-        if (form.height) dims.push(`H ${form.height}`);
-        sizeParts.push(`Dimensions ${dims.join(' × ')}`);
-      }
-      if (details) {
-        const short = details.length > 100 ? details.slice(0, 97).trim() + '...' : details;
-        sizeParts.push(short.charAt(0).toUpperCase() + short.slice(1));
-      }
-
-      const benefitMapping = (category) => {
-        const c = (category || '').toLowerCase();
-        if (c.includes('bike') || c.includes('bicycle') || c.includes('e-bike') || c.includes('electric')) return 'Perfect for commuting with efficient, eco-friendly performance.';
-        if (c.includes('sofa') || c.includes('couch')) return 'Great for relaxing and hosting with comfort.';
-        if (c.includes('wardrobe') || c.includes('cabinet')) return 'Helps organize your space while saving floor area.';
-        if (c.includes('kitchen') || c.includes('appliance')) return 'Engineered for reliable daily kitchen use.';
-        if (c.includes('table') || c.includes('desk')) return 'Versatile for work or dining in varied layouts.';
-        if (c.includes('display') || c.includes('divider')) return 'Perfect for display or partitioning with style.';
-        return shuffled.length > 1 ? shuffled[1] : 'Useful for practical everyday needs.';
-      };
-      const benefit = benefitMapping(form.category);
-
-      const sentence2 = ((sizeParts.join('. ') + (sizeParts.length ? '. ' : '')) + benefit).trim();
-      if (sentence2) parts.push(sentence2.endsWith('.') ? sentence2 : sentence2 + '.');
-
-      // Optionally add a short closer (rare)
-      if (Math.random() < 0.2) {
-        const closers = ['Built to last and designed to delight.', 'A reliable, stylish choice for everyday life.'];
-        parts.push(closers[Math.floor(Math.random() * closers.length)]);
-      }
-
-      // Limit to max 3 sentences
-      const joined = parts.join(' ');
-      const sentences = joined.split(/(?<=\.)\s+/).slice(0, 3).join(' ');
-      return sentences.trim();
-    };
+    // 6 completely distinct templates to cycle through
+    const templates = [
+      // T1: Direct + feature description
+      () => {
+        const lines = [];
+        if (cond) lines.push(`${cond}${cond === 'New' ? '' : ' condition'}.`);
+        if (s1) lines.push(s1);
+        if (details) lines.push(details.charAt(0).toUpperCase() + details.slice(1) + (details.endsWith('.') ? '' : '.'));
+        return lines.filter(Boolean).slice(0, 3).join(' ');
+      },
+      // T2: Feature-first + condition
+      () => {
+        const lines = [];
+        if (s1) lines.push(s1);
+        if (s2) lines.push(s2);
+        if (cond) lines.push(`Available in ${cond} condition.`);
+        return lines.filter(Boolean).slice(0, 3).join(' ');
+      },
+      // T3: Condition + pool + details/size
+      () => {
+        const lines = [];
+        if (cond) lines.push(`${cond} condition.`);
+        if (s2) lines.push(s2);
+        const dimensions = [form.length && `L ${form.length}`, form.width && `W ${form.width}`, form.height && `H ${form.height}`].filter(Boolean);
+        if (dimensions.length) lines.push(`Dimensions: ${dimensions.join(', ')}.`);
+        if (!dimensions.length && details) lines.push(details.charAt(0).toUpperCase() + details.slice(1) + (details.endsWith('.') ? '' : '.'));
+        return lines.filter(Boolean).slice(0, 3).join(' ');
+      },
+      // T4: Multiple pool sentences
+      () => {
+        const lines = [];
+        if (s1) lines.push(s1);
+        if (s2) lines.push(s2);
+        if (s3) lines.push(s3);
+        return lines.filter(Boolean).slice(0, 3).join(' ');
+      },
+      // T5: Details first + condition + pool
+      () => {
+        const lines = [];
+        if (details) lines.push(details.charAt(0).toUpperCase() + details.slice(1) + (details.endsWith('.') ? '' : '.'));
+        if (cond) lines.push(`In ${cond} condition.`);
+        if (s1) lines.push(s1);
+        return lines.filter(Boolean).slice(0, 3).join(' ');
+      },
+      // T6: Size/feature + condition + pool
+      () => {
+        const lines = [];
+        const dimensions = [form.length && `L ${form.length}`, form.width && `W ${form.width}`, form.height && `H ${form.height}`].filter(Boolean);
+        if (dimensions.length) lines.push(`Dimensions: ${dimensions.join(', ')}.`);
+        if (cond) lines.push(`${cond} condition.`);
+        if (s1) lines.push(s1);
+        return lines.filter(Boolean).slice(0, 3).join(' ');
+      },
+    ];
 
     let newDesc = '';
-    while (attempt < maxAttempts) {
-      attempt += 1;
-      newDesc = makeOne();
-      if (newDesc && newDesc !== prev) break;
+    let attempts = 0;
+    while (attempts < 10 && (!newDesc || newDesc === prev || newDesc === lastGeneratedDescription)) {
+      const tpl = templates[attempts % templates.length];
+      newDesc = tpl().trim();
+      attempts++;
     }
-    if (!newDesc) newDesc = prev; // fallback
-    setForm(prevState => ({ ...prevState, description: newDesc }));
+    if (!newDesc) newDesc = 'A quality item.';
+
+    setForm((s) => ({ ...s, description: newDesc }));
+    setLastGeneratedDescription(newDesc);
   };
 
   const fetchSoldProducts = async () => {
@@ -863,12 +845,9 @@ export default function AdminDashboard() {
               <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Category</label>
               <div style={{ display: 'flex', gap: '0.75em', marginBottom: '1.5em', alignItems: 'center' }}>
                 <div style={{ flex: 1, position: 'relative' }}>
-                  <input
-                    list="categories-list"
+                  <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    placeholder="Select or type category..."
-                    title={form.category || ''}
                     style={{
                       width: '100%',
                       fontSize: '1em',
@@ -884,15 +863,16 @@ export default function AdminDashboard() {
                       transition: 'all 0.15s ease',
                       fontFamily: '"Crimson Text", serif',
                       letterSpacing: '0.01em',
+                      cursor: 'pointer',
                     }}
                     onFocus={(e) => { e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244,169,168,0.07)'; }}
                     onBlur={(e) => { e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
-                  />
-                  <datalist id="categories-list">
+                  >
+                    <option value="">Select category...</option>
                     {categories.map((cat) => (
-                      <option key={cat} value={cat} />
+                      <option key={cat} value={cat}>{cat}</option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
                 <button
                   type="button"
@@ -946,12 +926,9 @@ export default function AdminDashboard() {
 
               <label style={{ display: 'block', marginBottom: '0.6em', fontWeight: 700, color: '#4a5d52', fontSize: '1em', letterSpacing: '0.02em', fontFamily: '"Playfair Display", serif' }}>Condition</label>
               <div style={{ marginBottom: '1.5em' }}>
-                <input
-                  list="condition-list"
+                <select
                   value={form.condition}
                   onChange={(e) => setForm({ ...form, condition: e.target.value })}
-                  placeholder="Select or type condition..."
-                  title={form.condition || ''}
                   style={{
                     width: '100%',
                     fontSize: '1em',
@@ -967,16 +944,17 @@ export default function AdminDashboard() {
                     transition: 'all 0.15s ease',
                     fontFamily: '"Crimson Text", serif',
                     letterSpacing: '0.01em',
+                    cursor: 'pointer',
                   }}
                   onFocus={(e) => { e.target.style.borderColor = '#f4a9a8'; e.target.style.boxShadow = '0 0 0 3px rgba(244,169,168,0.07)'; }}
                   onBlur={(e) => { e.target.style.borderColor = '#e8ddd8'; e.target.style.boxShadow = 'none'; }}
-                />
-                <datalist id="condition-list">
-                  <option value="New" />
-                  <option value="Like New" />
-                  <option value="Used" />
-                  <option value="Well-Used" />
-                </datalist>
+                >
+                  <option value="">Select condition...</option>
+                  <option value="New">New</option>
+                  <option value="Like New">Like New</option>
+                  <option value="Used">Used</option>
+                  <option value="Well-Used">Well-Used</option>
+                </select>
               </div>
 
               <label style={{ display: 'block', marginTop: '0.6em', marginBottom: '0.4em', fontWeight: 700, color: '#4a5d52', fontSize: '0.95em' }}>Condition Details (optional)</label>
